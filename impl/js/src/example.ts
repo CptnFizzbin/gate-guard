@@ -5,7 +5,6 @@ import type { InferActions, InferSubjects, KeycardConfig } from "./index"
 
 const logger = getLogger()
 
-// Define your action types
 const Actions = {
   create: createAction("create"),
   read: createAction("read"),
@@ -15,7 +14,6 @@ const Actions = {
 
 type AppActions = InferActions<typeof Actions>
 
-// Define your subject types
 const Subjects = {
   article: createSubject<{ id: number, ownerId: number }>("article"),
   comment: createSubject<{ userId: number, articleId: number }>("comment"),
@@ -23,14 +21,14 @@ const Subjects = {
 
 type AppSubjects = InferSubjects<typeof Subjects>
 
-// Bundle the action/subject vocabulary into one KeycardConfig, built once
-// and shared by every PolicyBuilder/Policy instead of kept in sync by hand
+// One KeycardConfig is shared by every PolicyBuilder/Policy, so the
+// action/subject vocabulary is never kept in sync by hand
 const config: KeycardConfig = {
   actions: Actions,
   subjects: Subjects,
 }
 
-// Build a policy scoped to one user - owners can update their own articles
+/** Returns `user`'s policy: anyone may create and read articles, and owners may update their own. */
 function createUserPolicy(user: { id: number }): Policy<AppActions, AppSubjects> {
   return new PolicyBuilder<AppActions, AppSubjects>(config)
     .allow(Actions.create, Subjects.article)
@@ -41,7 +39,6 @@ function createUserPolicy(user: { id: number }): Policy<AppActions, AppSubjects>
 
 const policy = createUserPolicy({ id: 5 })
 
-// Type-safe permission checks
 const ownArticle = Subjects.article.wrap({ id: 1, ownerId: 5 })
 const othersArticle = Subjects.article.wrap({ id: 2, ownerId: 6 })
 

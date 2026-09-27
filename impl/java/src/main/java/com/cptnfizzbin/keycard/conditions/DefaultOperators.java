@@ -6,13 +6,7 @@ import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 
-/**
- * Every operator {@link ConditionResolver} understands natively,
- * as {@link Operator} instances - the
- * same type a custom, host-application-supplied operator uses, so built-in
- * and custom operators are constructed, registered, and dispatched
- * identically.
- */
+/** Every built-in {@link Operator} a {@link ConditionResolver} registers by default. */
 final class DefaultOperators {
     private DefaultOperators() {}
 
@@ -32,7 +26,7 @@ final class DefaultOperators {
         Operator.of("$field", (s, v, ctx) -> fieldOpCheck(ctx, s, v))
     );
 
-    /** Every built-in operator name - the single source of truth for "is this name built-in". */
+    /** The names of every built-in operator. */
     static final Set<String> NAMES = ALL.stream().map(Operator::name).collect(Collectors.toUnmodifiableSet());
 
     /** $gt/$gte/$lt/$lte - numeric-only, IEEE-754 double semantics. */

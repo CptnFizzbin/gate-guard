@@ -90,7 +90,7 @@ public class ConditionResolverTest {
     }
 
     /**
-     * Issue 2: a custom operator receives an {@link com.cptnfizzbin.keycard.conditions.OperatorContext}
+     * A custom operator receives an {@link com.cptnfizzbin.keycard.conditions.OperatorContext}
      * that lets it recurse into the condition language exactly like the
      * built-in $and/$or/$not do - here, a custom "$every" operator
      * (re-implementing $and via resolveSubcondition) over a fixed subject.

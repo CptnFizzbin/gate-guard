@@ -1,30 +1,23 @@
 package com.cptnfizzbin.keycard.conditions;
 
 /**
- * A single `$`-prefixed condition operator - built-in
- * or custom. Both are the exact same type and are registered, looked up,
- * and dispatched identically: {@link DefaultOperators} supplies
- * one {@code Operator} per built-in, and a host application supplies its
- * own for a custom `$op` the same way, via whatever collection it passes
- * to {@code Policy}/{@code PolicyBuilder}/{@link ConditionResolver}. There
- * is deliberately no separate "custom checker" type - unifying the two
- * closes the capability gap a flat {@code (subject, value) -> boolean}
- * checker had: every {@code Operator}, custom ones included, receives an
- * {@link OperatorContext} letting it recurse into the condition language.
+ * A single {@code $}-prefixed condition operator. Built-in and custom
+ * operators share this type and are registered and dispatched identically;
+ * each receives an {@link OperatorContext} for evaluating nested conditions.
  */
 public interface Operator {
-    /** The `$`-prefixed name this operator is registered under (e.g. `"$eq"`, `"$hasRole"`). */
+    /** The {@code $}-prefixed name this operator is registered under (e.g. {@code "$eq"}, {@code "$hasRole"}). */
     String name();
 
     /**
-     * Evaluates this operator against `subject`/`value`. `ctx` lets the
-     * implementation recurse into the condition language via {@link
-     * OperatorContext#resolveSubcondition} - exactly what a custom
-     * operator needs to implement something like `$and`/`$or` itself.
+     * Returns whether {@code subject} satisfies this operator with operand
+     * {@code value}. {@code ctx} evaluates nested conditions via
+     * {@link OperatorContext#resolveSubcondition}, as a custom
+     * {@code $and}/{@code $or}-style operator would need.
      */
     boolean resolve(Object subject, Object value, OperatorContext ctx);
 
-    /** Builds an {@code Operator} from a name and a {@link Resolver} - the common case, for both built-ins and custom operators alike. */
+    /** Builds an {@code Operator} from a name and a {@link Resolver}. */
     static Operator of(String name, Resolver resolver) {
         return new Operator() {
             @Override

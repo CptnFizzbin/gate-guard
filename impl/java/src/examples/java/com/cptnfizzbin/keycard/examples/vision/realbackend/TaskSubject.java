@@ -23,8 +23,10 @@ public class TaskSubject extends Subject<TaskSubject.Claims, TaskSubject> {
         return new TaskSubject(this, instance);
     }
 
-    // composed from two entities - a Task alone doesn't carry orgId, but every
-    // Condition that scopes access to an org needs it on the subject
+    /**
+     * Wraps claims composed from {@code t} and its project {@code p} - a Task
+     * alone doesn't carry {@code orgId}, which every org-scoped Condition needs.
+     */
     public TaskSubject from(Task t, Project p) {
         return wrap(new Claims()
             .orgId(p.getOrgId())

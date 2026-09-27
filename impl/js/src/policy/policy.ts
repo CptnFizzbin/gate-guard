@@ -16,11 +16,7 @@ import type { Subject } from "../subject/index.ts"
 import type { SubjectFieldMapper } from "../subject/subjectFieldMapper.ts"
 import { KEYCARD_POLICY_SUPPORTED_VERSIONS } from "../version.ts"
 
-/**
- * Recursively collects every non-built-in, `$`-prefixed operator name used
- * anywhere in a Conditions tree - used to enforce `meta.operators`
- * coverage when loading a policy.
- */
+/** Adds to `out` every custom (non-built-in) operator name used anywhere in `condition`. */
 function collectCustomOperators(condition: AnyCondition | undefined, out: Set<string>): void {
   if (condition === undefined || condition === null || typeof condition !== "object") return
 
@@ -54,17 +50,17 @@ export class Policy<
   private readonly warnedDynamicIds = new Set<string>()
 
   /**
-   * @param config shared, optional config also accepted by `PolicyBuilder`
-   *   (and the SubjectFieldMapper feature): `actions`/`subjects`
+   * @param definition the parsed policy to enforce
+   * @param config optional config shared with `PolicyBuilder`: `actions`/`subjects`
    *   widen the `meta.actions`/`meta.subjects` catalogs beyond what
-   *   `definition.meta` itself declares, and double as a catalog resolving
-   *   a dynamic (no-name) Action/Subject's random name to its key, built
-   *   once here and cached (see `lib/catalog.ts`); `operators` - an
-   *   `AnyOperator[]` or an `OperatorCatalog` - is normalized once here;
-   *   `mapper` is consulted for a subject's fields whenever the `Subject`
-   *   passed to {@link can} doesn't carry its own `fieldMapper`; `emitMeta`
-   *   (default `true`) gates the eager catalog/operator validation below -
-   *   see `KeycardConfig`'s doc.
+   *   `definition.meta` declares, and resolve a dynamic (unnamed)
+   *   Action/Subject to its catalog key; `operators` registers custom
+   *   operators; `mapper` supplies the field mapper for a `Subject` passed
+   *   to {@link can} that doesn't carry its own; `emitMeta` (default `true`)
+   *   enables catalog and operator coverage validation - see `KeycardConfig`.
+   * @throws PolicyVersionException if `definition.version` is not supported
+   * @throws PolicyLoadException if a rule is malformed, or not covered by the
+   *   declared catalogs or registered operators
    */
   constructor(
     definition: PolicyDefinition,
@@ -115,11 +111,9 @@ export class Policy<
   }
 
   /**
-   * when `meta.operators` is declared, every
-   * name it lists MUST already be registered on this Policy - built-in or
-   * custom - checked once here when loading a policy, regardless of
-   * whether any rule actually reaches that operator during evaluation.
-   * Only run when `emitMeta` is true - see `KeycardConfig.emitMeta`'s doc.
+   * Throws a `PolicyLoadException` if `meta.operators` lists a name that isn't
+   * registered on `resolver` (built-in or custom), whether or not any rule
+   * uses it.
    */
   private static validateOperatorsRegistered(definition: PolicyDefinition, resolver: ConditionResolver): void {
     const declared = definition.meta?.operators
@@ -129,12 +123,14 @@ export class Policy<
   }
 
   /**
-   * @param configActionNames/@param configSubjectNames resolved catalog names (see `lib/catalog.ts`) that, when given, widen the `meta.actions`/`meta.subjects` catalogs below beyond what `definition.meta` declares.
-   * @param emitMeta when false, skips only the catalog-coverage checks
-   *   below (a rule action/subject/operator not covered by
-   *   `meta.actions`/`meta.subjects`/`meta.operators`) - the structural
-   *   checks (malformed rule tuples, both-sides-wildcarded rules with conditions) always run regardless, since
-   *   those guard evaluation correctness rather than diagnostics.
+   * Throws a `PolicyLoadException` for the first rule that is malformed,
+   * wildcarded on both action and subject while carrying conditions, or (when
+   * `emitMeta` is true) not covered by `meta.actions`/`meta.subjects`/`meta.operators`.
+   *
+   * @param configActionNames action names that widen `meta.actions` beyond what `definition.meta` declares
+   * @param configSubjectNames subject names that widen `meta.subjects` beyond what `definition.meta` declares
+   * @param emitMeta when false, only the catalog-coverage checks are skipped;
+   *   the structural checks always run, since evaluation depends on them
    */
   private static validateRules(
     definition: PolicyDefinition,
@@ -234,12 +230,10 @@ export class Policy<
   }
 
   /**
-   * Reverse scan over `rules`, returning the effect of
-   * the first (i.e. most-recently-declared) rule whose action, subject,
-   * and (if present) conditions all match. There is no independent
-   * "allow AND NOT deny" veto and no combination of multiple matching
-   * rules: exactly one rule decides the outcome, or none does and the
-   * result is default deny.
+   * Returns the effect of the last-declared rule whose action, subject, and
+   * (if present) conditions all match. Exactly one rule decides the outcome -
+   * there is no "allow AND NOT deny" veto - or none does and the result is
+   * default deny.
    */
   private checkPermission(action: TActions, subject: TSubjects): boolean {
     const meta = this.definition.meta
@@ -285,19 +279,15 @@ export class Policy<
     return subjectName === ruleSubject || (anySubject !== DISABLED && ruleSubject === anySubject)
   }
 
-  /**
-   * A dynamic (no-name) Action/Subject never registered in any catalog
-   * reachable from this Policy can't resolve to a real name - it falls
-   * through to default-deny like any other non-match (unless a wildcard
-   * rule catches it), but that's silent otherwise, so warn once per
-   * distinct id rather than once per `.can()`/`.cannot()`/`.require()` call.
-   */
+  /** Logs a warning, once per distinct id, when `value` is a dynamic (unnamed) Action/Subject missing from `reverseMap`. */
   private warnIfUnregisteredDynamic(
     value: { name: string, __dynamic?: true },
     reverseMap: Map<string, string>,
     kind: string,
     factory: string,
   ): void {
+    // An unregistered dynamic value can never match a non-wildcard rule, and
+    // would otherwise fall through to default deny silently.
     if (!value.__dynamic || reverseMap.has(value.name) || this.warnedDynamicIds.has(value.name)) return
     this.warnedDynamicIds.add(value.name)
     ;(this.config.logger ?? getLogger()).warn(

@@ -5,7 +5,7 @@ import type { Action, Subject } from "../../src/index.ts"
 import { createAction, createSubject } from "../../src/index.ts"
 import type { JsonValue } from "../../src/lib/json.ts"
 
-/** `*.yaml` files directly under `dir` for which `filter` holds (operators: all of them), sorted by name. */
+/** Returns the absolute paths of `*.yaml` files anywhere under `dir` that satisfy `filterFn`. */
 export function listYamlFiles(dir: string, filterFn: (fileName: string) => boolean = () => true): string[] {
   return readdirSync(dir, { recursive: true })
     .map((file) => file.toString())
@@ -21,8 +21,7 @@ export function actionArgFor(name: string): Action {
 
 /**
  * The subject argument every fixture-driven suite passes to `Policy.can`:
- * a bare Subject (no instance) when there's no instance data,
- * or one wrapping `subjectData` as its instance when there is.
+ * a bare Subject when `claims` is absent, otherwise one wrapping `claims`.
  */
 export function subjectArgFor(name: string, claims?: JsonValue): Subject {
   const subject = createSubject(name)

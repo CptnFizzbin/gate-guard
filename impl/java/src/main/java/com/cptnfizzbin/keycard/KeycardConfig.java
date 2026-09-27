@@ -27,40 +27,34 @@ public class KeycardConfig {
     private OperatorCatalog operators = new OperatorCatalog();
 
     /**
-     * Gates two things together: the eager, fail-fast checks {@link
-     * com.cptnfizzbin.keycard.builder.PolicyBuilder}/{@code Policy} do at
-     * construction beyond what's needed to actually resolve/evaluate a rule
-     * (a dynamic Action/Subject used but never registered on this catalog,
-     * a {@code Policy}'s loaded {@code PolicyDefinition} not actually
-     * satisfying its own declared {@code meta.actions}/{@code
-     * meta.subjects}/{@code meta.operators}) - and whether {@link
-     * PolicyBuilder#buildDef()} attaches the derived {@code meta} block at
-     * all. Worth paying for in development, where the goal is catching a
-     * bad rule before it's reviewed. In production, a definition that
-     * already passed CI doesn't need to re-prove itself on every boot.
+     * When {@code true} (the default), {@link com.cptnfizzbin.keycard.builder.PolicyBuilder}
+     * and {@link com.cptnfizzbin.keycard.policy.Policy} run fail-fast catalog
+     * checks at construction - a dynamic Action/Subject used but never
+     * registered, or a loaded definition not satisfying its own
+     * {@code meta.actions}/{@code meta.subjects}/{@code meta.operators} - and
+     * {@code PolicyBuilder#buildDef()} attaches the derived {@code meta} block.
+     * Set {@code false} to skip both, e.g. in production once CI has run the
+     * checks.
      */
     private boolean emitMeta = true;
 
     /**
-     * Reserved for embedding/running a policy's own shared, cross-language
-     * test cases (the {@code tests} block) - not yet wired to
-     * anything in this implementation.
+     * Reserved for embedding and running a policy's shared, cross-language
+     * test cases (the {@code tests} block); has no effect.
      */
+    // TODO: wire emitTests up to the policy's tests block
     private boolean emitTests = false;
 
     /**
-     * Undeclared ({@code null}) by default - only {@code PolicyBuilder}'s
-     * {@code buildMeta()} ever needs to fold this into {@code
-     * meta.anyAction}/{@code meta.anySubject}, and it MUST be able to tell
-     * "never configured" (stays {@code null}, {@code meta.anyAction} comes
-     * out undeclared too) apart from "explicitly disabled" ({@link
-     * WildcardToken.Disabled}, from a bare {@code null} Action/Subject
-     * argument here).
+     * The action wildcard token: {@code null} when never configured (so a
+     * built {@code meta.anyAction} stays undeclared), or
+     * {@link WildcardToken.Disabled} when disabled via {@code anyAction(null)}.
      */
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
     private WildcardToken anyAction = null;
 
+    /** The subject wildcard token, symmetric with {@link #anyAction}. */
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
     private WildcardToken anySubject = null;

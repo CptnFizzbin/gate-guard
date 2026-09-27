@@ -4,19 +4,16 @@ import type { Logger } from "./lib/logger.ts"
 import type { Subject, SubjectCatalog, SubjectFieldMapperCatalog } from "./subject/index.ts"
 
 /**
- * Optional, shared config both `Policy` and `PolicyBuilder` accept as their
- * sole extra constructor argument - one object bundling the actions/
+ * Optional config shared by `Policy` and `PolicyBuilder`: the actions and
  * subjects a policy is written against, its custom operators, and the
- * SubjectFieldMappers its subjects need, built once and handed to both
- * rather than kept in sync by hand. Every field is independently optional.
- *
- * `actions`/`subjects`/`anyAction`/`anySubject` are deliberately typed
- * against the base `Action`/`Subject` (not a builder's `TActions`/
- * `TSubjects`) - tying them to those generics would infer `TActions`/
- * `TSubjects` from this config alone and narrow what `allow`/`deny` accept
- * everywhere else on the same builder.
+ * SubjectFieldMappers its subjects need, so one object can be handed to both.
+ * Every field is independently optional.
  */
 export interface KeycardConfig<TOperators extends AnyOperator = never> {
+  // actions/subjects/anyAction/anySubject are typed against the base
+  // Action/Subject rather than a builder's TActions/TSubjects: tying them to
+  // those generics would infer TActions/TSubjects from this config alone and
+  // narrow what allow/deny accept everywhere else on the same builder.
   /**
    * Declared action vocabulary, additive to `meta.actions` -
    * each key becomes the serialized name for its entry, which is how a
@@ -45,20 +42,17 @@ export interface KeycardConfig<TOperators extends AnyOperator = never> {
   anySubject?: Subject | string | null
   /** SubjectFieldMappers registered by subject name - consulted when the Subject in hand doesn't carry its own `fieldMapper`. */
   mapper?: SubjectFieldMapperCatalog
-  /** Logger for non-fatal diagnostics (currently: an unregistered dynamic Action/Subject encountered at `.can()`/`.cannot()`/`.require()` time) - falls back to the module-level `getLogger()` when unset. */
+  /** Logger for non-fatal diagnostics, such as an unregistered dynamic Action/Subject passed to `.can()`/`.cannot()`/`.require()`. Defaults to `getLogger()`. */
   logger?: Logger
   /**
-   * Gates two things together, both worth paying for in dev and dead
-   * weight in prod once CI has already run them once: the eager catalog/
-   * operator validation `PolicyBuilder`/`Policy` do at construction (an
-   * unregistered dynamic Action/Subject, a duplicate catalog key, a custom
-   * operator `meta.operators` declares but nothing registered - all fail
-   * loudly, immediately, when this is `true`) and the diagnostic
-   * `meta.actions`/`meta.subjects`/`meta.operators` a built
-   * `PolicyDefinition` carries alongside its `rules` (omitted when this is
-   * `false` - `meta.anyAction`/`meta.anySubject`, being functionally
-   * required for evaluation rather than diagnostic, are always emitted
-   * when non-default). Defaults to `true`.
+   * When `true` (the default), `PolicyBuilder`/`Policy` validate catalogs and
+   * operators at construction - an unregistered dynamic Action/Subject, a
+   * duplicate catalog key, or a `meta.operators` entry with no registered
+   * operator throws immediately - and a built `PolicyDefinition` includes the
+   * diagnostic `meta.actions`/`meta.subjects`/`meta.operators`. Set `false`
+   * to skip both, e.g. in production once CI has run the validation.
+   * `meta.anyAction`/`meta.anySubject` are always emitted when non-default,
+   * since evaluation depends on them.
    */
   emitMeta?: boolean
 }

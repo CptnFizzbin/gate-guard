@@ -79,7 +79,10 @@ public class Condition<S> {
     }
 
     /**
-     * $substr - a small, non-regex substring pattern language.
+     * Matches when the field's string form matches the {@code $substr}
+     * {@code pattern}: {@code *} matches any run of characters, a leading
+     * {@code ^} or trailing {@code $} anchors, and a backslash escapes the next
+     * character.
      */
     public static <T> Condition<T> substr(FieldGetter<T, String> getter, String pattern) {
         return new Condition<>(extractFieldName(getter), "$substr", pattern);

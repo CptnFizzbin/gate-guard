@@ -4,10 +4,10 @@ import com.cptnfizzbin.keycard.action.Action;
 import com.cptnfizzbin.keycard.action.ActionCatalog;
 
 public class AppActions {
-    // dynamic: no name baked into the Action itself - catalog.set(...)'s
-    // key is what actually gets serialized into a PolicyDefinition's rule
-    // tuples, and it registers the Action the same moment it names it
     public static final ActionCatalog catalog = new ActionCatalog();
+
+    // Dynamic Actions: catalog.set(...)'s key is what gets serialized into a
+    // PolicyDefinition's rule tuples, and it registers the Action as it names it.
 
     public static Action Create = catalog.set("create", new Action());
     public static Action Read = catalog.set("read", new Action());

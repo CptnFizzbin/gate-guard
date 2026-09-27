@@ -42,8 +42,8 @@ describe("PolicyBuilder: meta.actions/subjects/operators are derived from usage"
       .allow(createAction("Read"), createSubject("*"))
       .build()
 
-    // "*" is now the action wildcard token: a rule naming it as its
-    // action matches any incoming action.
+    // With anyAction "*", a rule naming "*" as its action matches any
+    // incoming action.
     expect(policy.can(createAction("AnythingGoes"), createSubject("Article"))).toBe(true)
 
     // The subject wildcard is disabled (null): a rule's literal "*"

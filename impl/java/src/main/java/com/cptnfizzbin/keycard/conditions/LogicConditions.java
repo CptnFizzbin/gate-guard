@@ -3,14 +3,10 @@ package com.cptnfizzbin.keycard.conditions;
 import java.util.List;
 
 /**
- * Pure combining logic for $or/$and/$not -
- * type-checking the operand and the required diagnostic on failure
- * (including the vacuous-empty-array case) is the caller's job
- * (ConditionResolver), so {@link #or}/{@link #and} assume an
- * already-validated {@link List}. An empty list naturally falls out
- * correct here with no special-casing: zero iterations of `or` never
- * finds a match (false), zero iterations of `and` never finds a
- * counterexample (true).
+ * Combining logic for {@code $or}/{@code $and}/{@code $not} over an
+ * already-validated operand; callers type-check it and log any diagnostic. An
+ * empty list is {@code false} for {@link #or} and {@code true} for
+ * {@link #and}.
  */
 public final class LogicConditions {
     private LogicConditions() {}

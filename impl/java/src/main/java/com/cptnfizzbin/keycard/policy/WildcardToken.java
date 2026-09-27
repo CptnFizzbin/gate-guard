@@ -3,14 +3,10 @@ package com.cptnfizzbin.keycard.policy;
 import com.cptnfizzbin.keycard.errors.PolicyLoadException;
 
 /**
- * Type-state for a declared {@code meta.anyAction}/{@code meta.anySubject}
- * position - replaces the previous
- * {@code anyActionDeclared}/{@code anyAction} boolean-pair workaround on
- * {@link PolicyDefinition.Meta} with a proper sum type. "Not declared at
- * all" isn't one of these states; it's represented by a {@code null}
- * {@link PolicyDefinition.Meta#getAnyAction()}/{@code getAnySubject()}, so
- * {@link Wildcards} can tell "absent, defaults to _ANY_" apart from either
- * state below.
+ * A declared {@code meta.anyAction}/{@code meta.anySubject}: either disabled
+ * or a named token. An undeclared position is represented by {@code null}
+ * rather than a {@code WildcardToken}, and defaults to {@code "_ANY_"} (see
+ * {@link Wildcards}).
  */
 public sealed interface WildcardToken {
     /** The wildcard mechanism is disabled for this position - no string, including {@code "_ANY_"}, has special meaning. */
@@ -22,14 +18,11 @@ public sealed interface WildcardToken {
     Disabled DISABLED = new Disabled();
 
     /**
-     * Four-way dispatch for a raw, untyped declaration:
-     * {@code null} or {@code false} disables the wildcard
-     * position; a {@link String} names an explicit token; anything else -
-     * a number, {@code true}, a list, ... - is invalid and MUST throw
-     * immediately rather than being silently coerced or passed through as
-     * a raw value. ("Undeclared" isn't a case here at all - it's the
-     * absence of a call to this method, i.e. the field simply staying
-     * {@code null} on {@code Meta}.)
+     * Parses a raw declaration: {@code null} or {@code false} disables the
+     * wildcard and a {@link String} names a token.
+     *
+     * @throws PolicyLoadException for any other value (a number, {@code true},
+     *   a list, ...), which is never coerced
      */
     static WildcardToken of(Object raw) {
         if (raw == null) return DISABLED;

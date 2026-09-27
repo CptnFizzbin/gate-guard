@@ -155,7 +155,7 @@ public class PolicyTest {
     }
 
     /**
-     * Issue 1: a custom operator supplied to {@code PolicyBuilder} carries
+     * A custom operator supplied to {@code PolicyBuilder} carries
      * through {@code build()} into the constructed {@code Policy} - a
      * builder-produced definition doesn't need its operators re-supplied
      * separately at {@code new Policy(...)}.

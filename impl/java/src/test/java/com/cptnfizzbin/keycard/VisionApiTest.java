@@ -20,16 +20,14 @@ import java.util.List;
 import static org.junit.Assert.*;
 
 /**
- * Covers the API additions made to align the Java implementation with
- * website/docs-java/vision-quickstart.md and vision-real-backend.md:
+ * Covers the API shown in website/docs-java/vision-quickstart.md and
+ * vision-real-backend.md:
  * {@code ActionCatalog}/{@code SubjectCatalog#set}, the self-bounded
  * {@code Subject<T, TSelf>} subclassing hook, {@code Condition.where}/the
  * getter-scoped {@code Condition.op}, {@link ConditionOperator}, and
  * {@code KeycardConfig#emitMeta}.
  */
 public class VisionApiTest {
-    // --- ActionCatalog.set / SubjectCatalog.set ---
-
     @Test
     public void actionCatalogSetRegistersAndReturnsTheAction() {
         ActionCatalog catalog = new ActionCatalog();
@@ -79,8 +77,6 @@ public class VisionApiTest {
         assertThrows(PolicyArgumentException.class, () -> catalog.set(new Subject<>()));
     }
 
-    // --- Subject<T, TSelf>: a dedicated subclass's wrap()/from() return its own subtype, no cast ---
-
     private static class ArticleSubject extends Subject<String, ArticleSubject> {
         ArticleSubject() {
             super();
@@ -109,8 +105,6 @@ public class VisionApiTest {
         assertEquals("owner-1", wrapped.claims().orElseThrow());
     }
 
-    // --- Condition.where / the getter-scoped Condition.op ---
-
     @Getter
     @AllArgsConstructor
     static class Article {
@@ -138,8 +132,6 @@ public class VisionApiTest {
         assertFalse(policy.can(read, subject.wrap(new Article(1, List.of(), "published"))));
     }
 
-    // --- OperatorCatalog.set / ConditionOperator ---
-
     @Test
     public void operatorCatalogSetRegistersAFlatTwoArgOperatorAndReturnsIt() {
         OperatorCatalog catalog = new OperatorCatalog();
@@ -160,8 +152,6 @@ public class VisionApiTest {
         assertTrue(policy.can(read, subject.wrap(new Article(1, List.of(), "draft"))));
         assertFalse(policy.can(read, subject.wrap(new Article(1, List.of(), "published"))));
     }
-
-    // --- KeycardConfig.emitMeta ---
 
     @Test
     public void emitMetaDefaultsToTrueAndAttachesMeta() {
@@ -187,10 +177,8 @@ public class VisionApiTest {
     public void emitMetaFalseSkipsTheEagerDynamicCatalogCheck() {
         KeycardConfig config = new KeycardConfig().emitMeta(false);
 
-        // A dynamic Action with no catalog registration would normally
-        // throw at addRule() time - emitMeta(false) skips that fail-fast
-        // check, matching "a definition that already passed CI doesn't
-        // need to re-prove itself on every boot".
+        // A dynamic Action with no catalog registration would normally throw
+        // at addRule() time; emitMeta(false) skips that fail-fast check.
         new PolicyBuilder(config).allow(new Action(), new Subject<>("Article")); // should not throw
     }
 

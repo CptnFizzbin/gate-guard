@@ -13,10 +13,15 @@ import { DISABLED, effectiveAnyAction, effectiveAnySubject } from "../policy/wil
 import type { Subject } from "../subject/index.ts"
 import { KEYCARD_POLICY_VERSION } from "../version.ts"
 
-/** The v1 SemVer this builder implements - stamped onto every `buildDef()` output. */
+/** The policy spec version stamped onto every `buildDef()` output. */
 export const BUILDER_VERSION = KEYCARD_POLICY_VERSION
 
-/** @param reverseMap resolves a dynamic Action/Subject's random name to its catalog key - see `lib/catalog.ts`. */
+/**
+ * Returns the serialized wildcard token for `value`: `null` disables the
+ * wildcard and `undefined` selects the default token.
+ *
+ * @param reverseMap resolves a dynamic Action/Subject to its catalog key
+ */
 function wildcardNameOf(value: Action | Subject | string | undefined | null, reverseMap: Map<string, string>): string | null {
   if (value === null) return null
   if (typeof value === "undefined") return DEFAULT_WILDCARD
@@ -25,16 +30,12 @@ function wildcardNameOf(value: Action | Subject | string | undefined | null, rev
 }
 
 /**
- * Builds a {@link PolicyDefinition} rule by rule. `meta.actions`/
- * `meta.subjects`/`meta.operators` are never supplied directly by default -
- * {@link buildDef} fills them in automatically from what {@link allow}/
- * {@link deny} actually used and what `operators` actually registered, so
- * there's no separately hand-maintained catalog to keep in sync by hand.
- * `config.actions`/`config.subjects` (constructor param, optional) declare
- * additional vocabulary up front, folded in alongside whatever usage
- * derives. `config.anyAction`/`config.anySubject` are the only things a
- * caller ever needs to declare explicitly - the wildcard tokens themselves,
- * since nothing about them can be inferred from usage.
+ * Builds a {@link PolicyDefinition} rule by rule. {@link buildDef} derives
+ * `meta.actions`/`meta.subjects`/`meta.operators` from what {@link allow}/
+ * {@link deny} used and what `operators` registered, so there is no
+ * hand-maintained catalog to keep in sync. `config.actions`/`config.subjects`
+ * declare additional vocabulary up front; `config.anyAction`/`config.anySubject`
+ * declare the wildcard tokens, which can't be inferred from usage.
  */
 export class PolicyBuilder<
   TActions extends Action = Action,
@@ -55,17 +56,14 @@ export class PolicyBuilder<
   private readonly configSubjectNames: string[]
 
   /**
-   * @param config shared, optional config also accepted by `Policy` -
-   *   `actions`/`subjects` are folded into `meta.actions`/`meta.subjects`
-   *   alongside whatever `allow`/`deny` actually used, and double as a
-   *   catalog resolving a dynamic (no-name) Action/Subject's random name to
-   *   its key, built once here and cached (see `lib/catalog.ts`);
-   *   `anyAction`/`anySubject` declare the wildcard tokens; `operators` -
-   *   an `AnyOperator[]` or an `OperatorCatalog` - is normalized once here;
-   *   `mapper` is carried through to the built `Policy` unchanged;
-   *   `emitMeta` (default `true`) gates eager catalog validation here as
-   *   well as `meta.actions`/`meta.subjects`/`meta.operators` in
-   *   {@link buildDef}'s output - see `KeycardConfig`'s doc.
+   * @param config optional config shared with `Policy`: `actions`/`subjects`
+   *   are added to `meta.actions`/`meta.subjects` alongside whatever
+   *   `allow`/`deny` used, and resolve a dynamic (unnamed) Action/Subject to
+   *   its catalog key; `anyAction`/`anySubject` declare the wildcard tokens;
+   *   `operators` registers custom operators; `mapper` is passed through to
+   *   the built `Policy`; `emitMeta` (default `true`) enables catalog
+   *   validation and the diagnostic `meta` fields in {@link buildDef}'s
+   *   output - see `KeycardConfig`.
    */
   constructor(config: KeycardConfig<TOperators> = {}) {
     this.emitMeta = config.emitMeta ?? true
@@ -124,7 +122,7 @@ export class PolicyBuilder<
   buildDef(options: { includeMeta?: boolean } = {}): PolicyDefinition {
     const def: PolicyDefinition = {
       version: BUILDER_VERSION,
-      meta: {}, // placeholder to hold it's spot when converted to JSON
+      meta: {}, // Reserves meta's position ahead of rules, so serialized JSON lists it first
       rules: this.rules,
     }
 
@@ -138,12 +136,9 @@ export class PolicyBuilder<
   }
 
   /**
-   * derives `actions`/`subjects`/`operators` from what was actually used/
-   * registered, plus whatever `config.actions`/`config.subjects`
-   * additionally declare - see the class doc. `anyAction`/`anySubject`,
-   * being functionally required for evaluation rather than diagnostic, are
-   * included whenever declared even with `emitMeta: false`; the rest
-   * (`actions`/`subjects`/`operators`) is diagnostic only and omitted then.
+   * Returns the `meta` block: non-default `anyAction`/`anySubject` always, and
+   * (when `emitMeta` is true) the `actions`/`subjects`/`operators` used or
+   * declared so far.
    */
   private buildMeta(): Meta {
     const meta: Meta = {}
@@ -175,12 +170,9 @@ export class PolicyBuilder<
     const subjectName = resolveName(this.subjectCatalog, subject.name)
 
     if (conditions) {
-      // A rule wildcarded on both the action and the subject MUST NOT
-      // carry a Conditions element - the builder MUST catch this
-      // immediately, rather than waiting for eventual construction
-      // (Policy.from) to catch it. Always checked,
-      // regardless of emitMeta - this guards evaluation correctness, not
-      // just diagnostics.
+      // The spec requires the builder to reject a conditional rule wildcarded on
+      // both sides at the call site, not later in Policy.from. Checked even
+      // when emitMeta is false, since it guards evaluation, not diagnostics.
       const anyAction = effectiveAnyAction({ anyAction: this.anyAction })
       const anySubject = effectiveAnySubject({ anySubject: this.anySubject })
       if (

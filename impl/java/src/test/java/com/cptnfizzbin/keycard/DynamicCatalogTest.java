@@ -15,16 +15,12 @@ import java.util.List;
 import static org.junit.Assert.*;
 
 /**
- * Optional Action/Subject naming resolved via a KeycardConfig catalog - see
- * "Dynamic (unnamed) Subjects/Actions and the Catalog" in
- * docs/guidelines/keycard-api.md. Mirrors the JS test suite's
- * actionFactory.test.ts/subjectFactory.test.ts and the "dynamic (no-name)
- * Action/Subject resolved via a KeycardConfig catalog" describe blocks in
- * builder/policyBuilder.test.ts and policy/policy.test.ts.
+ * Covers dynamic (unnamed) Actions/Subjects resolved via a KeycardConfig
+ * catalog, mirroring the JS suite's actionFactory.test.ts,
+ * subjectFactory.test.ts, and the matching describe blocks in
+ * policyBuilder.test.ts and policy.test.ts.
  */
 public class DynamicCatalogTest {
-
-    // --- Action.create()/new Action() (no-arg) ---
 
     @Test
     public void actionCreateWithANameBehavesAsBeforeNotDynamic() {
@@ -49,8 +45,6 @@ public class DynamicCatalogTest {
 
         assertNotEquals(a.name(), b.name());
     }
-
-    // --- Subject.create()/new Subject<>() (no-arg) ---
 
     @Test
     public void subjectCreateWithANameBehavesAsBeforeNotDynamic() {
@@ -85,8 +79,6 @@ public class DynamicCatalogTest {
         assertTrue(wrapped.dynamic());
         assertEquals(1, wrapped.claims().orElseThrow().intValue());
     }
-
-    // --- PolicyBuilder: dynamic (no-name) Action/Subject resolved via a KeycardConfig catalog ---
 
     @Test
     public void aKeyedCatalogsKeyNotTheDynamicDefsRandomIdIsWhatGetsSerialized() {
@@ -166,8 +158,6 @@ public class DynamicCatalogTest {
         assertEquals("submit", def.getRules().get(0).action());
         assertEquals("post", def.getRules().get(0).subjectName());
     }
-
-    // --- Policy: dynamic (no-name) Action/Subject resolved via a KeycardConfig catalog ---
 
     @Test
     public void aDynamicDefResolvesViaItsCatalogKeyToMatchARuleWrittenAgainstThatKey() {

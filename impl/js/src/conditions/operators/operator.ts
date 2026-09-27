@@ -10,7 +10,7 @@ export interface OperatorContext {
   /** Evaluates `condition` against a subject already narrowed by one field access, disabling any further field narrowing beneath it - used by the bare-key field path and `$field`. */
   resolveFieldSubcondition<TSubject>(subject: TSubject, condition: Condition<TSubject>): boolean
 
-  /** true if a field condition (bare-key or `$field`) is still allowed to narrow at this point in the tree - v1 permits exactly one level. */
+  /** Returns `true` if a field condition (bare-key or `$field`) may still narrow at this point in the tree - the spec permits exactly one level. */
   canNarrowField(): boolean
 }
 
@@ -38,10 +38,9 @@ export function createOperator<TSubject, TValue = JsonValue>(
         return resolver(subject, value, ctx)
       } catch (e) {
         if (e instanceof PolicyTypeMismatchError) {
-          // "type issues are diagnosed, not silenced" - call
-          // getLogger() fresh rather than caching it at module load, so
-          // a consumer's setLogger() (almost always called after this
-          // module has already been imported) still takes effect.
+          // getLogger() is called per failure rather than cached at module
+          // load, so a setLogger() call made after this module is imported
+          // still takes effect.
           getLogger().warn(e.message)
           return false
         }
@@ -52,12 +51,7 @@ export function createOperator<TSubject, TValue = JsonValue>(
   }
 }
 
-/**
- * A bare resolver function, keyed by its own `$name` in an
- * {@link OperatorCatalog} rather than wrapped via `createOperator` - `ctx`
- * is optional since most operators (comparisons, pattern matching) never
- * need it.
- */
+/** A bare operator resolver function, keyed by its `$name` in an {@link OperatorCatalog}. */
 export type OperatorResolver<TSubject = unknown, TValue = JsonValue> = (
   subject: TSubject,
   value: TValue,
@@ -65,13 +59,14 @@ export type OperatorResolver<TSubject = unknown, TValue = JsonValue> = (
 ) => boolean
 
 /**
- * A keyed collection of custom operators - the catalog counterpart to
- * `AnyOperator[]` (built via `createOperator`), symmetric with
- * `ActionCatalog`/`SubjectCatalog`: each key is the operator's own
- * `$`-prefixed name, and its value is a bare resolver function rather than
- * an `Operator` object, since an operator (unlike an Action/Subject) has no
- * "dynamic, no name yet" state for a catalog key to resolve. Handed to
+ * A keyed collection of custom operators, as an alternative to an
+ * `AnyOperator[]` built via `createOperator`: each key is the operator's
+ * `$`-prefixed name and its value is the resolver function. Handed to
  * `PolicyBuilder`/`Policy` via `KeycardConfig.operators`.
+ *
+ * ```ts
+ * const operators: OperatorCatalog = { $even: (subject: number) => subject % 2 === 0 }
+ * ```
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type OperatorCatalog<TSubject = any, TValue = JsonValue> = Record<`$${string}`, OperatorResolver<TSubject, TValue>>

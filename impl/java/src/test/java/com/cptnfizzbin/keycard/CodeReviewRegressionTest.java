@@ -19,7 +19,9 @@ import java.util.Set;
 import static org.junit.Assert.*;
 
 /**
- * Regression coverage for bugs found in a review of the Java implementation.
+ * Regression coverage for Policy isolation from later mutation, structural
+ * validation, numeric equality across boxed types, and method-reference field
+ * names.
  */
 public class CodeReviewRegressionTest {
     public record Doc(long ownerId, Set<String> tags, String isbn) {}
@@ -27,8 +29,6 @@ public class CodeReviewRegressionTest {
     private static final Action READ = new Action("read");
     private static final Action DELETE = new Action("delete");
     private static final Subject<Doc, ?> DOC = new Subject<>("doc");
-
-    // --- a built Policy is isolated from later mutation ---
 
     @Test
     public void builderCallsAfterBuildDoNotChangeAnAlreadyBuiltPolicy() {
@@ -51,8 +51,6 @@ public class CodeReviewRegressionTest {
         assertFalse(policy.can(DELETE, DOC));
     }
 
-    // --- structural validation isn't gated by emitMeta ---
-
     @Test
     public void malformedEffectIsRejectedEvenWithEmitMetaOff() {
         PolicyDefinition def = new PolicyDefinition()
@@ -68,8 +66,6 @@ public class CodeReviewRegressionTest {
 
         assertThrows(PolicyLoadException.class, () -> new Policy(def, new KeycardConfig().emitMeta(false)));
     }
-
-    // --- $eq/$in/$has use value equality across boxed numeric types ---
 
     @Test
     public void integerConditionMatchesLongField() {
@@ -99,8 +95,6 @@ public class CodeReviewRegressionTest {
         assertTrue(policy.can(READ, DOC.wrap(new Doc(1, Set.of("public"), "x"))));
         assertTrue(new ConditionResolver().evaluate(3, Map.of("$in", Set.of(1, 2, 3))));
     }
-
-    // --- field names derived from method references ---
 
     @Test
     public void accessorStartingWithIsOrGetIsNotMangled() {

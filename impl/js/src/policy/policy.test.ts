@@ -130,8 +130,6 @@ describe("Policy: construction-time validation", () => {
     ).toThrow(PolicyLoadException)
   })
 
-  // --- operator registry collisions ---
-
   test("throws PolicyLoadException when a custom operator collides with a builtin", () => {
     expect(() =>
       Policy.from(
@@ -159,7 +157,6 @@ describe("Policy: construction-time validation", () => {
     ).toThrow(PolicyLoadException)
   })
 
-  // --- meta.operators promotes "cataloged but never registered" to a construction-time throw ---
   // Spec: https://keycard.cptnfizzbin.dev/spec/v0#metaoperators
 
   test("throws PolicyLoadException when meta.operators declares a name nothing is registered for", () => {

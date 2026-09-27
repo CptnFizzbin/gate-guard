@@ -10,19 +10,27 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * {@code TSelf} is a self-bound (as with {@code Enum<E extends Enum<E>>}):
- * it lets {@link #wrap} return the real subtype with no cast, for a Subject
- * that's been extended into its own dedicated class (recommended - see
- * docs). Used directly - {@code new Subject<T, ?>()}, no subclass - it's
- * exactly today's simple/dynamic Subject, and {@link #copy} falls back to
- * rebuilding a plain {@code Subject} itself.
+ * A named subject - the Subject position of a rule - optionally wrapping
+ * claims for a rule's conditions to inspect. The no-arg constructor creates a
+ * dynamic Subject whose name is a random id, which must be registered under a
+ * catalog key before use.
  * <p>
- * A dedicated subclass (e.g. {@code ArticleSubject extends
- * Subject<ArticleSubject.Claims, ArticleSubject>}) overrides {@link #copy}
- * to call its own private {@code (Subject, Claims)} constructor instead -
- * two lines, no cast anywhere, in the library or in application code -
- * so {@link #wrap} and any {@code from(...)} built on it return that exact
- * subtype.
+ * {@code TSelf} is a self-bound type (as with {@code Enum<E extends Enum<E>>})
+ * so {@link #wrap} returns the real subtype without a cast. A dedicated
+ * subclass (recommended) overrides {@link #copy} to call its own
+ * {@code (Subject, Claims)} constructor:
+ * <pre>{@code
+ * class ArticleSubject extends Subject<ArticleSubject.Claims, ArticleSubject> {
+ *     private ArticleSubject(Subject<Claims, ArticleSubject> prev, Claims instance) {
+ *         super(prev, instance);
+ *     }
+ *
+ *     @Override
+ *     protected ArticleSubject copy(Claims instance) {
+ *         return new ArticleSubject(this, instance);
+ *     }
+ * }
+ * }</pre>
  */
 @Getter
 @Accessors(fluent = true)
@@ -64,9 +72,9 @@ public class Subject<T, TSelf extends Subject<T, TSelf>> {
     }
 
     /**
-     * Rebuilds this Subject with {@code instance} as its claims, preserving
-     * id/name/dynamic. The base implementation covers plain, non-subclassed
-     * use; a dedicated subclass overrides it - see the class doc.
+     * Returns a copy of this Subject with {@code instance} as its claims,
+     * preserving id/name/dynamic. A dedicated subclass overrides it to return
+     * its own type - see the class doc.
      */
     @SuppressWarnings("unchecked")
     protected TSelf copy(@Nullable T instance) {

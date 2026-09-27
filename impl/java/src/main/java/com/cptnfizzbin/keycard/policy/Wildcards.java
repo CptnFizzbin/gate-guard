@@ -1,45 +1,32 @@
 package com.cptnfizzbin.keycard.policy;
 
-/**
- * Shared wildcard-token resolution for {@link Policy} and {@code
- * PolicyBuilder}.
- */
+/** Wildcard-token resolution and matching for {@link Policy} and {@code PolicyBuilder}. */
 public final class Wildcards {
     private Wildcards() {
     }
 
     private static final WildcardToken.Named DEFAULT_WILDCARD = new WildcardToken.Named("_ANY_");
 
-    /**
-     * A declared {@link WildcardToken}, or the "_ANY_" default when none
-     * was declared ({@code null}) - the shared building block behind
-     * {@link #effectiveAnyAction}/{@link #effectiveAnySubject}, and
-     * reusable wherever a token needs resolving before a {@code Meta}
-     * exists yet (e.g. {@code PolicyBuilder}, still accumulating rules).
-     */
+    /** Returns {@code declared}, or the {@code "_ANY_"} default when it is {@code null} (undeclared). */
     public static WildcardToken orDefault(WildcardToken declared) {
         return declared != null ? declared : DEFAULT_WILDCARD;
     }
 
     /**
-     * meta.anyAction: absent (a {@code null} {@link PolicyDefinition.Meta#getAnyAction()})
-     * -&gt; the "_ANY_" default; otherwise whatever {@link WildcardToken}
-     * was declared ({@link WildcardToken.Disabled} or {@link WildcardToken.Named}).
+     * Returns the action wildcard token in effect: the {@code "_ANY_"}
+     * default when {@code meta.anyAction} is undeclared, otherwise the
+     * declared {@link WildcardToken}.
      */
     public static WildcardToken effectiveAnyAction(PolicyDefinition.Meta meta) {
         return orDefault(meta != null ? meta.anyAction() : null);
     }
 
-    /**
-     * meta.anySubject: symmetric with {@link #effectiveAnyAction} in every respect.
-     */
+    /** Returns the subject wildcard token in effect, symmetric with {@link #effectiveAnyAction}. */
     public static WildcardToken effectiveAnySubject(PolicyDefinition.Meta meta) {
         return orDefault(meta != null ? meta.anySubject() : null);
     }
 
-    /**
-     * True when `value` matches `ruleValue` exactly, or `ruleValue` is the (non-disabled) wildcard token.
-     */
+    /** Returns {@code true} when {@code value} equals {@code ruleValue}, or {@code ruleValue} is the (non-disabled) wildcard token {@code any}. */
     public static boolean matches(String value, String ruleValue, WildcardToken any) {
         if (value.equals(ruleValue)) return true;
         return any instanceof WildcardToken.Named named && ruleValue.equals(named.token());

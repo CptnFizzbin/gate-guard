@@ -23,7 +23,7 @@ import java.util.Map;
 import static org.junit.Assert.*;
 
 /**
- * Construction-time validation required by the spec but not covered by the allow/deny-outcome-only v1 conformance suite (see test/fixtures/v1/README.md's Scope section).
+ * Construction-time validation required by the spec but not covered by the allow/deny-outcome-only conformance suite (see test/fixtures/v0/README.md's Scope section).
  */
 public class PolicyValidationTest {
     private static KeycardConfig withOperators(Operator... operators) {
@@ -96,8 +96,6 @@ public class PolicyValidationTest {
             ));
     }
 
-    // --- Issue 3: operator registry collisions ---
-
     @Test
     public void throwsPolicyLoadExceptionWhenACustomOperatorCollidesWithABuiltin() {
         assertThrows(PolicyLoadException.class, () ->
@@ -114,7 +112,6 @@ public class PolicyValidationTest {
             )));
     }
 
-    // --- Issue 4: meta.operators promotes "cataloged but never registered" to a construction-time throw ---
     // Spec: https://keycard.cptnfizzbin.dev/spec/v0#metaoperators
 
     @Test
@@ -146,8 +143,6 @@ public class PolicyValidationTest {
         ); // should not throw
     }
 
-    // --- Issue 5: meta.anyAction/meta.anySubject four-way dispatch ---
-
     @Test
     public void falseDisablesTheActionWildcardJustLikeNull() {
         PolicyDefinition.Meta meta = new PolicyDefinition.Meta().anyAction(false);
@@ -161,8 +156,6 @@ public class PolicyValidationTest {
         assertTrue(policy.cannot(new Action("Read"), new Subject<>("Article")));
         assertTrue(policy.can(new Action("_ANY_"), new Subject<>("Article")));
     }
-
-    // --- PolicyBuilder derives meta.actions/subjects/operators from usage; only the wildcard tokens are ever declared explicitly ---
 
     @Test
     public void buildDefDerivesActionsSubjectsAndOperatorsFromWhatWasActuallyUsed() {
@@ -203,8 +196,8 @@ public class PolicyValidationTest {
             .allow(new Action("Read"), new Subject<>("*"))
             .build();
 
-        // "*" is now the action wildcard token: a rule naming it as its
-        // action matches any incoming action.
+        // With anyAction "*", a rule naming "*" as its action matches any
+        // incoming action.
         assertTrue(policy.can(new Action("AnythingGoes"), new Subject<>("Article")));
 
         // The subject wildcard is disabled (false): a rule's literal "*"
@@ -219,8 +212,6 @@ public class PolicyValidationTest {
             new PolicyBuilder(new KeycardConfig().anyAction(new Action("*")).anySubject(new Subject<>("*")))
                 .allow(new Action("*"), new Subject<>("*"), Condition.op("owner_id", 1)));
     }
-
-    // --- KeycardConfig, accepted by both PolicyBuilder and Policy ---
 
     @Test
     public void keycardConfigActionsAndSubjectsAreFoldedIntoMetaAlongsideWhatUsageDerives() {
@@ -273,12 +264,12 @@ public class PolicyValidationTest {
             .allow(new Action("Read"), AnySubject)
             .build();
 
-        // "*" is now the action wildcard token: a rule naming it as its
-        // action matches any incoming action.
+        // With anyAction "*", a rule naming "*" as its action matches any
+        // incoming action.
         assertTrue(policy.can(new Action("AnythingGoes"), new Subject<>("Article")));
 
-        // "*" is also now the subject wildcard token: a rule naming it as
-        // its subject matches any incoming subject.
+        // With anySubject "*", a rule naming "*" as its subject matches any
+        // incoming subject.
         assertTrue(policy.can(new Action("Read"), new Subject<>("AnySubjectName")));
         assertTrue(policy.can(new Action("Read"), new Subject<>("*")));
     }

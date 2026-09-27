@@ -4,30 +4,25 @@ import type { AnyCondition, Condition } from "../../condition.ts"
 import type { OperatorContext } from "../operator.ts"
 
 /**
- * true when `subject` is a non-null object carrying
- * `fieldName` - a missing field (or a non-object subject) is absence, not
- * a type issue, so this stays a plain predicate rather than throwing.
- * Shared by the bare-key field path (`ConditionResolver.fieldCheck`) and
- * the explicit `$field` operator, which narrow the same way.
+ * Returns `true` when `subject` is a non-null object carrying `fieldName`.
+ * A missing field or non-object subject counts as absence, not a type
+ * mismatch, so this never throws.
  */
 export function hasField(subject: unknown, fieldName: string): subject is Record<string, unknown> {
   return subject !== null && typeof subject === "object" && fieldName in subject
 }
 
 /**
- * `$ne`-on-a-missing-field carve-out: MUST be the exact negation of
- * `$eq` even when the field being tested is missing, since `$eq`
- * on a missing field is false - so `$ne` on a missing field is true,
- * unlike every other operator, which keeps the blanket `false`. Narrow by
- * design: only fires when `$ne` is itself the sole nested condition, not
- * when it's one key among several in a multi-key condition object
- * or nested deeper - `{ status: { $not: { $eq: "archived" } } }` on a
- * missing `status` still gets the blanket `false`, unlike a bare
- * `{ status: { $ne: "archived" } }`, even though `$not` has the same
- * "exact negation" contract `$ne` does. Undecided whether that
- * should change; not addressed here.
+ * Returns `true` when `condition` is exactly `{ $ne: ... }` - the only field
+ * condition a missing field satisfies. A `$ne` that is one key among several,
+ * or nested deeper, doesn't count.
  */
 export function isBareNe<TSubject>(condition: Condition<TSubject>): boolean {
+  // The spec requires $ne to be the exact negation of $eq, and $eq on a
+  // missing field is false, so a bare $ne on a missing field must be true;
+  // every other operator keeps the blanket false.
+  // TODO: decide whether `{ $not: { $eq: x } }` on a missing field should also
+  // be true, since $not carries the same "exact negation" contract as $ne.
   return (
     typeof condition === "object"
     && condition !== null
@@ -38,14 +33,9 @@ export function isBareNe<TSubject>(condition: Condition<TSubject>): boolean {
 }
 
 /**
- * An {@link OperatorContext} additionally carrying a SubjectFieldMapper for
- * the subject currently in scope. Only ever attached to a context where
- * `canNarrowField()` is `true`: a field mapper is bound to the original
- * top-level subject, and that's the only point in the tree `subject` is
- * still guaranteed to be it (permits only one level of field
- * narrowing, and only field access - never `$and`/`$or`/`$not` - narrows
- * `subject` at all). `ConditionResolver` is the only place that constructs
- * one.
+ * An {@link OperatorContext} additionally carrying the SubjectFieldMapper for
+ * the top-level subject. Only present where `canNarrowField()` is `true` - the
+ * only point in the tree where the subject in scope is still the top-level one.
  */
 export interface FieldMapperContext extends OperatorContext {
   readonly fieldMapper: SubjectFieldMapper<unknown>
@@ -56,21 +46,17 @@ function hasFieldMapper(ctx: OperatorContext): ctx is FieldMapperContext {
 }
 
 /**
- * shared narrowing logic for the bare-key field path and
- * the explicit `$field` operator - both resolve to "look up a named field on
- * the subject, then evaluate against it," and both are subject to v1's
- * top-level-only restriction: a field condition MUST NOT itself narrow into
- * another field, so `ctx.canNarrowField()` must still be `true` at this
- * point in the tree. When it isn't - a field condition already reached by
- * one narrowing step attempting a second - this is a structural problem,
- * not a data one, so it's diagnosed like any other malformed condition
- * shape rather than silently returning `false`.
+ * Evaluates `condition` against the `fieldName` field of `subject`, as both a
+ * bare-key field condition and `$field` do. The context's SubjectFieldMapper,
+ * if any, is tried first; a field it doesn't define uses ordinary property
+ * access. A missing field satisfies only a bare `$ne` (see {@link isBareNe}).
  *
- * When `ctx` carries a SubjectFieldMapper, it's tried first for
- * `fieldName`; a field it doesn't define falls through to ordinary
- * property access, same as when no mapper is attached at all.
+ * @throws PolicyTypeMismatchError if `ctx` doesn't allow field narrowing,
+ *   i.e. a field condition is nested inside another field condition
  */
 export function checkField<TSubject>(subject: TSubject, fieldName: string, condition: AnyCondition, ctx: OperatorContext): boolean {
+  // A second narrowing step is a malformed condition shape, not a data
+  // mismatch, so it's diagnosed rather than silently returning false.
   if (!ctx.canNarrowField()) {
     throw new PolicyTypeMismatchError({
       value: {
