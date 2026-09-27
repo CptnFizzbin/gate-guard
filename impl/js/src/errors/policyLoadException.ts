@@ -1,3 +1,5 @@
+import { PolicyError } from "./policyError.ts"
+
 /**
  * Thrown by `Policy.from(...)` (or an equivalent construction entry point)
  * when a `PolicyDefinition` is structurally invalid -
@@ -6,7 +8,7 @@
  * referencing an action/subject/custom-operator name outside a declared
  * `meta` catalog.
  */
-export class PolicyLoadException extends Error {
+export class PolicyLoadException extends PolicyError {
   constructor(message: string) {
     super(message)
     this.name = "PolicyLoadException"

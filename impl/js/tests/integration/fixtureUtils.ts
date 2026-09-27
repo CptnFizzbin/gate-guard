@@ -26,5 +26,7 @@ export function actionArgFor(name: string): Action {
  */
 export function subjectArgFor(name: string, claims?: JsonValue): Subject {
   const subject = createSubject(name)
-  return claims ? subject.wrap(claims) : subject
+  // Only an absent third element means "no instance" - null/0/false/""
+  // are real instance data and must still be wrapped.
+  return claims === undefined ? subject : subject.wrap(claims)
 }

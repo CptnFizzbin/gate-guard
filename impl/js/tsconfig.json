@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "strict": true,
-    "module": "esnext",
+    "module": "nodenext",
     "moduleResolution": "nodenext",
     "target": "es2025",
     "lib": [
@@ -16,6 +16,7 @@
   },
   "include": [
     "src",
+    "examples",
     "tests",
     "paths.ts",
     "*.config.ts"

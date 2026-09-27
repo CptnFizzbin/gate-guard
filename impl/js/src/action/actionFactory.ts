@@ -1,5 +1,5 @@
-import { randomId } from "../lib/randomId.ts"
 import type { Action } from "./action.ts"
+import { randomId } from "../lib/randomId.ts"
 
 /**
  * Creates a named Action. Called with no `name`, generates a random id in

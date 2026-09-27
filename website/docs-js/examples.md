@@ -196,7 +196,7 @@ const json = JSON.stringify(policy.def());
 // It can be loaded with any conformant KeyCard implementation.
 ```
 
-See `src/example.ts` in the
+See `examples/basic.ts` in the
 [`impl/js`](https://github.com/CptnFizzbin/keycard/tree/main/impl/js)
 package for a complete working example.
 

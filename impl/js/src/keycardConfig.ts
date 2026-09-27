@@ -37,15 +37,21 @@ export interface KeycardConfig<TOperators extends AnyOperator = never> {
   /**
    * The action wildcard token - undeclared by default, in which case
    * `PolicyBuilder`'s built `meta.anyAction` comes out undeclared too (the
-   * `"_ANY_"` default then applies). An explicit `null` disables the
-   * action wildcard entirely, distinct from leaving this unset.
+   * `"_ANY_"` default then applies). An explicit `null` or `false` disables
+   * the action wildcard entirely, distinct from leaving this unset.
    */
-  anyAction?: Action | string | null
+  anyAction?: Action | string | false | null
   /** The subject wildcard token, symmetric with `anyAction`. */
-  anySubject?: Subject | string | null
+  anySubject?: Subject | string | false | null
   /** SubjectFieldMappers registered by subject name - consulted when the Subject in hand doesn't carry its own `fieldMapper`. */
   mapper?: SubjectFieldMapperCatalog
-  /** Logger for non-fatal diagnostics (currently: an unregistered dynamic Action/Subject encountered at `.can()`/`.cannot()`/`.require()` time) - falls back to the module-level `getLogger()` when unset. */
+  /**
+   * Logger for every non-fatal diagnostic a `Policy` emits - a condition
+   * type mismatch or malformed condition during evaluation, and an
+   * unregistered dynamic Action/Subject encountered at `.can()`/
+   * `.cannot()`/`.require()` time. Falls back to the module-level logger
+   * (see `setLogger`) when unset.
+   */
   logger?: Logger
   /**
    * Gates two things together, both worth paying for in dev and dead

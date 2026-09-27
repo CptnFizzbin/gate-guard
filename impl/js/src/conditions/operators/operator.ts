@@ -1,6 +1,7 @@
+import { PolicyArgumentError } from "../../errors/policyArgumentError.ts"
 import { PolicyTypeMismatchError } from "../../errors/policyTypeMismatchError.ts"
 import type { JsonValue } from "../../lib/json.ts"
-import { getLogger } from "../../lib/logger.ts"
+import type { Logger } from "../../lib/logger.ts"
 import type { Condition } from "../condition.ts"
 
 export interface OperatorContext {
@@ -12,6 +13,9 @@ export interface OperatorContext {
 
   /** true if a field condition (bare-key or `$field`) is still allowed to narrow at this point in the tree - v1 permits exactly one level. */
   canNarrowField(): boolean
+
+  /** Where this evaluation's diagnostics go - the owning `Policy`'s `KeycardConfig.logger` when set, the module-level `getLogger()` otherwise. */
+  readonly logger: Logger
 }
 
 export interface Operator<TSubject, TValue = JsonValue> {
@@ -27,10 +31,23 @@ export type InferCondition<TOperator extends AnyOperator> =
     ? { [key in TOperator["name"]]: TValue }
     : never
 
+/**
+ * An operator name MUST be `$`-prefixed - a key without the prefix is
+ * always read as a field name, so an operator registered under one could
+ * never be reached. Checked at runtime since names can come from untyped
+ * sources (an `OperatorCatalog` built from data, plain JS callers).
+ */
+export function assertOperatorName(name: unknown): asserts name is `$${string}` {
+  if (typeof name !== "string" || !name.startsWith("$") || name.length < 2) {
+    throw new PolicyArgumentError(`Invalid operator name ${JSON.stringify(name)}: operator names MUST start with "$".`)
+  }
+}
+
 export function createOperator<TSubject, TValue = JsonValue>(
   name: Operator<TSubject, TValue>["name"],
   resolver: Operator<TSubject, TValue>["resolve"],
 ): Operator<TSubject, TValue> {
+  assertOperatorName(name)
   return {
     name,
     resolve: (subject, value, ctx) => {
@@ -38,11 +55,9 @@ export function createOperator<TSubject, TValue = JsonValue>(
         return resolver(subject, value, ctx)
       } catch (e) {
         if (e instanceof PolicyTypeMismatchError) {
-          // "type issues are diagnosed, not silenced" - call
-          // getLogger() fresh rather than caching it at module load, so
-          // a consumer's setLogger() (almost always called after this
-          // module has already been imported) still takes effect.
-          getLogger().warn(e.message)
+          // "type issues are diagnosed, not silenced" - routed through
+          // the context so a Policy's own KeycardConfig.logger receives it.
+          ctx.logger.warn(e.message)
           return false
         }
 
@@ -82,5 +97,8 @@ export function normalizeOperators<TOperators extends AnyOperator>(
 ): AnyOperator[] {
   if (operators === undefined) return []
   if (Array.isArray(operators)) return operators
-  return Object.entries(operators).map(([name, resolve]) => createOperator(name as `$${string}`, resolve))
+  return Object.entries(operators).map(([name, resolve]) => {
+    assertOperatorName(name)
+    return createOperator(name, resolve)
+  })
 }

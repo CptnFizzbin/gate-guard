@@ -7,11 +7,25 @@ import type { OperatorContext } from "../operator.ts"
  * true when `subject` is a non-null object carrying
  * `fieldName` - a missing field (or a non-object subject) is absence, not
  * a type issue, so this stays a plain predicate rather than throwing.
- * Shared by the bare-key field path (`ConditionResolver.fieldCheck`) and
- * the explicit `$field` operator, which narrow the same way.
+ * Shared by the bare-key field path and the explicit `$field` operator,
+ * which narrow the same way.
+ *
+ * Inherited members count (a class instance's getters are real fields),
+ * but only when some class in the chain declares them: a name that merely
+ * comes from `Object.prototype` (`constructor`, `toString`, `__proto__`,
+ * ...) is not one of the subject's fields, so it's treated as missing.
  */
 export function hasField(subject: unknown, fieldName: string): subject is Record<string, unknown> {
-  return subject !== null && typeof subject === "object" && fieldName in subject
+  if (subject === null || typeof subject !== "object") return false
+
+  if (Object.hasOwn(subject, fieldName)) return true
+  // Every prototype carries a `constructor` - it's never a declared field.
+  if (fieldName === "constructor") return false
+
+  for (let proto = Object.getPrototypeOf(subject); proto !== null; proto = Object.getPrototypeOf(proto)) {
+    if (Object.hasOwn(proto, fieldName)) return proto !== Object.prototype
+  }
+  return false
 }
 
 /**
@@ -80,7 +94,7 @@ export function checkField<TSubject>(subject: TSubject, fieldName: string, condi
     })
   }
 
-  if (hasFieldMapper(ctx) && fieldName in ctx.fieldMapper) {
+  if (hasFieldMapper(ctx) && Object.hasOwn(ctx.fieldMapper, fieldName)) {
     return ctx.resolveFieldSubcondition(ctx.fieldMapper[fieldName](subject), condition)
   }
 

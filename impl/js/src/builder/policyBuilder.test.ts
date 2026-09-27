@@ -85,6 +85,7 @@ describe("PolicyBuilder: meta.actions/subjects/operators are derived from usage"
     const article = createSubject<{ id: number }>("Article")
 
     const policy = new PolicyBuilder({ operators: { $hasRole: () => true } })
+      // @ts-expect-error -- an OperatorCatalog's keys aren't inferred into the builder's condition type yet (only AnyOperator[] is)
       .allow(createAction("Read"), article, { $hasRole: "admin" })
       .build()
 
@@ -180,5 +181,49 @@ describe("PolicyBuilder: emitMeta", () => {
     expect(() =>
       new PolicyBuilder({ emitMeta: false, actions: { create, submit: create } }),
     ).not.toThrow()
+  })
+})
+
+describe("PolicyBuilder: output isolation", () => {
+  const Read = createAction("Read")
+  const Article = createSubject<{ owner_id: number }>("Article")
+
+  test("rules added after build() don't change the already-built Policy", () => {
+    const builder = new PolicyBuilder().allow(Read, Article)
+    const policy = builder.build()
+
+    builder.deny(Read, Article)
+
+    expect(policy.can(Read, Article)).toBe(true)
+    expect(builder.build().can(Read, Article)).toBe(false)
+  })
+
+  test("rules added after buildDef() don't change the already-returned definition", () => {
+    const builder = new PolicyBuilder().allow(Read, Article)
+    const def = builder.buildDef()
+
+    builder.deny(Read, Article)
+
+    expect(def.rules).toHaveLength(1)
+  })
+
+  test("mutating a buildDef() result doesn't change the builder", () => {
+    const builder = new PolicyBuilder().allow(Read, Article, { owner_id: 1 })
+
+    const def = builder.buildDef()
+    def.rules.push(["deny", "Read", "Article"])
+    ;(def.rules[0][3] as Record<string, unknown>).owner_id = 2
+
+    expect(builder.buildDef().rules).toEqual([["allow", "Read", "Article", { owner_id: 1 }]])
+  })
+
+  test("anyAction/anySubject: false disables the wildcard and is emitted as-is", () => {
+    const def = new PolicyBuilder({ anyAction: false, anySubject: false }).buildDef()
+
+    expect(def.meta).toMatchObject({ anyAction: false, anySubject: false })
+  })
+
+  test("rejects a custom operator whose name isn't $-prefixed", () => {
+    expect(() => new PolicyBuilder({ operators: { hasRole: () => true } as never })).toThrow(PolicyArgumentError)
   })
 })
