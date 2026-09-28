@@ -19,15 +19,9 @@ import java.util.List;
 
 import static org.junit.Assert.*;
 
-/**
- * Covers the API additions made to align the Java implementation with
- * website/docs-java/vision-quickstart.md and vision-real-backend.md:
- * {@code ActionCatalog}/{@code SubjectCatalog#set}, the self-bounded
- * {@code Subject<T, TSelf>} subclassing hook, {@code Condition.where}/the
- * getter-scoped {@code Condition.op}, {@link ConditionOperator}, and
- * {@code KeycardConfig#emitMeta}.
- */
+/** Covers the API shown in website/docs-java/vision-quickstart.md and vision-real-backend.md. */
 public class VisionApiTest {
+
     // --- ActionCatalog.set / SubjectCatalog.set ---
 
     @Test
@@ -58,8 +52,6 @@ public class VisionApiTest {
         SubjectCatalog catalog = new SubjectCatalog();
         ArticleSubject article = catalog.set("article", new ArticleSubject());
 
-        // set() returns ArticleSubject itself, not a plain Subject<?, ?> -
-        // no cast needed to keep using it as an ArticleSubject.
         assertSame(article, catalog.get("article"));
         ArticleSubject wrapped = article.from("owner-1");
         assertEquals("owner-1", wrapped.claims().orElseThrow());
@@ -187,10 +179,8 @@ public class VisionApiTest {
     public void emitMetaFalseSkipsTheEagerDynamicCatalogCheck() {
         KeycardConfig config = new KeycardConfig().emitMeta(false);
 
-        // A dynamic Action with no catalog registration would normally
-        // throw at addRule() time - emitMeta(false) skips that fail-fast
-        // check, matching "a definition that already passed CI doesn't
-        // need to re-prove itself on every boot".
+        // A dynamic Action with no catalog registration would normally throw
+        // at addRule() time; emitMeta(false) skips that fail-fast check.
         new PolicyBuilder(config).allow(new Action(), new Subject<>("Article")); // should not throw
     }
 

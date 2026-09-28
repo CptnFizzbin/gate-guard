@@ -1,28 +1,22 @@
 import { PolicyArgumentError } from "../errors/index.ts"
 
-/**
- * Resolves a `KeycardConfig.actions`/`.subjects` catalog (an `ActionCatalog`/
- * `SubjectCatalog`, i.e. a keyed `Record<string, T>`) into the reverse
- * `id -> catalog key` map `PolicyBuilder`/`Policy` use to resolve a dynamic
- * Action/Subject's random name into its real, serializable one, plus the
- * full list of names to fold into `meta.actions`/`meta.subjects`.
- */
+/** A resolved `ActionCatalog`/`SubjectCatalog`: the reverse name lookup plus every catalog key. */
 export interface CatalogResolution {
   /** Raw name (a dynamic Action/Subject's random id, or a named entry's own name) -> catalog key. */
   reverseMap: Map<string, string>
-  /** Every resolved name: each entry's catalog key. */
   names: string[]
 }
 
 const EMPTY_RESOLUTION: CatalogResolution = { reverseMap: new Map(), names: [] }
 
 /**
- * @param kind used only to name the vocabulary ("action"/"subject") in a
- *   duplicate-registration error message.
- * @param validate when false (`KeycardConfig.emitMeta: false`), skips the
- *   duplicate-key check below - a definition that already passed CI once
- *   doesn't need to re-prove itself on every construction. The last entry
- *   for a given raw name still wins in `reverseMap`, silently.
+ * Resolves a `KeycardConfig.actions`/`.subjects` catalog into a {@link CatalogResolution}.
+ *
+ * @param kind names the vocabulary ("action"/"subject") in error messages
+ * @param validate when false, an entry registered under two keys is not
+ *   rejected; the last key wins
+ * @throws PolicyArgumentError if `validate` is true and one entry is
+ *   registered under more than one key
  */
 export function buildCatalog<T extends { name: string }>(
   entries: Record<string, T> | undefined,
@@ -49,7 +43,6 @@ export function buildCatalog<T extends { name: string }>(
   return { reverseMap, names }
 }
 
-/** Resolves `rawName` (an Action/Subject's `.name`, dynamic or not) to its catalog key, or returns it unchanged when it isn't a registered catalog entry. */
 export function resolveName(reverseMap: Map<string, string>, rawName: string): string {
   return reverseMap.get(rawName) ?? rawName
 }

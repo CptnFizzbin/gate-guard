@@ -13,9 +13,6 @@ public class QuickstartDemo {
     public static final Action update = new Action("update");
     public static final Action delete = new Action("delete");
 
-    // Policy Claims: the only input this policy needs is who's asking
-    // KeycardConfig is optional here - PolicyBuilder just needs the Actions/
-    // Subjects used in .allow()/.deny() calls, not a full app-wide catalog
     public static Policy policyForUser(User user) {
         Condition<ArticleSubject.Claims> isOwner = Condition.eq(ArticleSubject.Claims::ownerId, user.getId());
         Condition<ArticleSubject.Claims> isEditor = Condition.has(ArticleSubject.Claims::editorIds, user.getId());

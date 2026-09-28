@@ -1,21 +1,10 @@
 #!/usr/bin/env -S npx tsx
 /**
- * Prepares every implementation for release. Run from the repo root:
- *
- *   yarn prepare-release
- *
- * What it does:
- *   1. Runs `changeset version`, which consumes every pending changeset in
- *      .changeset/*.md and, for each package that has one, bumps its
- *      package.json version and writes/updates its CHANGELOG.md.
- *   2. changesets only understands package.json, so for impl/java it also
- *      propagates the version it just wrote into pom.xml and the two
- *      version strings in README.md - the places Maven/Gradle consumers
- *      and docs actually read it from.
- *   3. Prints a summary of what changed and the git tag(s) to push to
- *      trigger each package's publish workflow (see /RELEASING.md).
- *
- * This script only edits files - it never commits, tags, or pushes.
+ * Prepares every implementation for release (`yarn prepare-release`, from the
+ * repo root): runs `changeset version`, then - since changesets only
+ * understands package.json - propagates impl/java's new version into pom.xml
+ * and README.md, and prints the tags to push (see /RELEASING.md). Only edits
+ * files; never commits, tags, or pushes.
  */
 import { execSync } from "node:child_process"
 import { readFileSync, writeFileSync } from "node:fs"
@@ -26,11 +15,9 @@ const ROOT = resolve(import.meta.dirname, "..")
 interface Impl {
   /** Directory relative to the repo root. */
   dir: string
-  /** Human-readable label for log output. */
   label: string
   /** Tag prefix used by the matching .github/workflows/publish-*.yml. */
   tagPrefix: string
-  /** Propagate a newly-bumped version into files other than package.json. */
   syncVersionInto?: (version: string) => void
 }
 

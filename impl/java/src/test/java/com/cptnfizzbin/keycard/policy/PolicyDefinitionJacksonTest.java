@@ -10,17 +10,10 @@ import java.util.Map;
 import static org.junit.Assert.*;
 
 /**
- * {@link PolicyDefinition}/{@link PolicyDefinition.Rule}/{@link
- * PolicyDefinition.Meta} are Jackson-annotated so any consumer can bind a
- * document straight to/from them with a plain {@link ObjectMapper} - no
- * KeyCard-specific adapter, and (as this suite deliberately uses) no YAML
- * format module either, since databind alone is enough to exercise the
- * annotations. The actual fixture-driven suites under {@code
- * integration/} cover evaluation outcomes; this one covers the
- * databinding itself, including the {@code anyAction}/{@code anySubject}
- * "not declared" vs. "declared null" distinction that
- * {@link WildcardTokenDeserializer}/{@link WildcardTokenSerializer} exist
- * to preserve.
+ * Covers binding {@link PolicyDefinition}/{@link PolicyDefinition.Rule}/
+ * {@link PolicyDefinition.Meta} to and from JSON with a plain
+ * {@link ObjectMapper}, including the {@code anyAction}/{@code anySubject}
+ * "not declared" vs. "declared null" distinction.
  */
 public class PolicyDefinitionJacksonTest {
     private static final ObjectMapper MAPPER = new ObjectMapper();

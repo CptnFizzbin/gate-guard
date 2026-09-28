@@ -17,19 +17,11 @@ public class AppPolicyBuilder {
         .actions(AppActions.catalog)
         .subjects(AppSubjects.catalog)
         .operators(AppOperators.catalog)
-        /*
-        Enables the ability to perform fail-fast checks while loading a
-        policy during development. When added, the library is able to
-        confirm that all actions, subjects, and operators needed for the
-        policy are registered.
-        */
-        .emitMeta(true) // default: true - flip to Environment.isDevelopment() in a real app
-        /*
-        Enables the ability for shared test cases to be added to the policy
-        file to allow for confirmations that two or more languages are
-        operating with the same permissions.
-        */
-        .emitTests(false); // default: false
+        // Fail-fast checks that every action, subject, and operator the policy
+        // uses is registered; a real app would pass Environment.isDevelopment().
+        .emitMeta(true)
+        // Shared cross-language test cases aren't supported yet.
+        .emitTests(false);
 
     public static Policy buildFor(PolicyClaims claims) {
         PolicyBuilder builder = new PolicyBuilder(CONFIG)
@@ -48,7 +40,6 @@ public class AppPolicyBuilder {
                     Condition.and(inOrg, isArchived)
                 ));
         } else {
-            // members can only touch tasks assigned to them, and only recent ones
             Condition<TaskSubject.Claims> inOrg = Condition.eq(TaskSubject.Claims::orgId, claims.orgId());
             Condition<TaskSubject.Claims> isAssignee = Condition.eq(TaskSubject.Claims::assigneeId, claims.userId());
             Condition<TaskSubject.Claims> isRecent = Condition.op(TaskSubject.Claims::createdAt, "$withinDays", 30);

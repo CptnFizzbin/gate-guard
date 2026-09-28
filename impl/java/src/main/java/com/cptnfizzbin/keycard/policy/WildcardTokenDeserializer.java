@@ -7,16 +7,10 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import java.io.IOException;
 
 /**
- * Binds a raw {@code anyAction}/{@code anySubject} value - a string,
- * {@code null}, {@code false}, or anything else - to a {@link
- * WildcardToken} via {@link WildcardToken#of}, applying its
- * four-way dispatch. {@link #getNullValue} is what Jackson
- * calls for an *explicit* null the property declares; Jackson never
- * calls either method when the property is absent altogether, which is
- * what lets {@link PolicyDefinition.Meta#anyAction()}/{@code
- * anySubject()} tell "declared null" (disables the wildcard) apart from
- * "not declared at all" (stays {@code null}) once bound straight from a
- * document.
+ * Binds a raw {@code anyAction}/{@code anySubject} value to a
+ * {@link WildcardToken} via {@link WildcardToken#of}. An explicit {@code null}
+ * disables the wildcard; an absent property leaves the field {@code null}
+ * (undeclared).
  */
 final class WildcardTokenDeserializer extends JsonDeserializer<WildcardToken> {
     @Override
@@ -24,6 +18,8 @@ final class WildcardTokenDeserializer extends JsonDeserializer<WildcardToken> {
         return WildcardToken.of(p.readValueAs(Object.class));
     }
 
+    // Jackson calls this only for an explicit null, never for an absent
+    // property, which keeps "declared null" distinct from "undeclared".
     @Override
     public WildcardToken getNullValue(DeserializationContext ctxt) {
         return WildcardToken.of(null);

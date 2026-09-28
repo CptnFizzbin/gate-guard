@@ -130,8 +130,6 @@ describe("Policy: construction-time validation", () => {
     ).toThrow(PolicyLoadException)
   })
 
-  // --- operator registry collisions ---
-
   test("throws PolicyLoadException when a custom operator collides with a builtin", () => {
     expect(() =>
       Policy.from(
@@ -159,14 +157,10 @@ describe("Policy: construction-time validation", () => {
     ).toThrow(PolicyLoadException)
   })
 
-  // --- meta.operators promotes "cataloged but never registered" to a construction-time throw ---
   // Spec: https://keycard.cptnfizzbin.dev/spec/v0#metaoperators
 
   test("throws PolicyLoadException when meta.operators declares a name nothing is registered for", () => {
-    // Unlike the uncataloged-operator case above, this throws even though no rule references
-    // $hasRole at all - meta.operators' registration requirement is
-    // checked in full when loading a policy, not merely for names rules
-    // actually use.
+    // Throws even though no rule uses $hasRole: every meta.operators entry must be registered.
     expect(() =>
       Policy.from({
         version: "0.1",

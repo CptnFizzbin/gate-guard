@@ -65,7 +65,11 @@ public final class Policy {
     }
 
     /**
-     * A bare-type check (no instance): a conditional rule can never match this.
+     * Returns whether {@code action} is allowed on {@code subject}: the
+     * last-declared rule whose action, subject, and conditions all match
+     * decides, and no match means deny. There is no "allow AND NOT deny" veto.
+     * A subject without claims (a bare type check) never matches a conditional
+     * rule.
      */
     public boolean can(Action action, Subject<?, ?> subject) {
         return checkPermission(action, subject);
@@ -83,14 +87,6 @@ public final class Policy {
         }
     }
 
-    /**
-     * Reverse scan over `rules`, returning the effect of
-     * the first (i.e. most-recently-declared) rule whose action, subject,
-     * and (if present) conditions all match. There is no independent
-     * "allow AND NOT deny" veto and no combination of multiple matching
-     * rules: exactly one rule decides the outcome, or none does and the
-     * result is default deny.
-     */
     private boolean checkPermission(Action action, Subject<?, ?> subject) {
         String actionName = Catalog.resolveName(actionReverseMap, action.name());
         String subjectName = Catalog.resolveName(subjectReverseMap, subject.name());
@@ -103,8 +99,8 @@ public final class Policy {
 
             Map<String, Object> conditions = rule.conditions();
             if (conditions != null) {
-                // A conditional rule can never be satisfied by a bare-type/no-instance
-                // check - there's no instance data for the condition to inspect.
+                // A bare check has no claims for the conditions to inspect; without
+                // this guard, a condition such as { x: { $ne: 1 } } would match it.
                 if (subject.claims().isEmpty()) continue;
                 if (!resolver.evaluate(subject.claims().get(), conditions)) continue;
             }
@@ -128,10 +124,9 @@ public final class Policy {
     }
 
     /**
-     * when `meta.operators` is declared, every
-     * name it lists MUST already be registered on this Policy - built-in or
-     * custom - checked once here when loading a policy, regardless of
-     * whether any rule actually reaches that operator during evaluation.
+     * Throws a {@link PolicyLoadException} if {@code meta.operators} lists a
+     * name that isn't registered on {@code resolver} (built-in or custom),
+     * whether or not any rule uses it.
      */
     private static void validateOperatorsRegistered(PolicyDefinition definition, ConditionResolver resolver) {
         PolicyDefinition.Meta meta = definition.meta();
@@ -141,10 +136,6 @@ public final class Policy {
         resolver.assertAllRegistered(declared);
     }
 
-    /**
-     * Malformed rule tuples and conditional both-sides-wildcarded rules -
-     * always checked, since evaluation can't proceed safely past either.
-     */
     private static void validateRuleShapes(List<PolicyDefinition.Rule> rules, WildcardToken anyAction, WildcardToken anySubject) {
         for (PolicyDefinition.Rule rule : rules) {
             if (!"allow".equals(rule.effect()) && !"deny".equals(rule.effect())) {
@@ -173,8 +164,8 @@ public final class Policy {
     }
 
     /**
-     * @param configActionNames resolved catalog names (see {@code lib.Catalog}) that, when given, widen the `meta.actions` catalog below beyond what `definition.meta` declares.
-     * @param configSubjectNames resolved catalog names (see {@code lib.Catalog}) that, when given, widen the `meta.subjects` catalog below beyond what `definition.meta` declares.
+     * @param configActionNames action names that widen {@code meta.actions} beyond what {@code definition.meta} declares
+     * @param configSubjectNames subject names that widen {@code meta.subjects} beyond what {@code definition.meta} declares
      */
     private static void validateRuleCatalogs(
         PolicyDefinition definition,
@@ -229,11 +220,6 @@ public final class Policy {
         }
     }
 
-    /**
-     * Recursively collects every non-built-in, `$`-prefixed operator name
-     * used anywhere in a Conditions tree - used to enforce `meta.operators`
-     * coverage when loading a policy.
-     */
     private static void collectCustomOperators(Object condition, Set<String> out) {
         if (!(condition instanceof Map<?, ?> map)) return;
 
