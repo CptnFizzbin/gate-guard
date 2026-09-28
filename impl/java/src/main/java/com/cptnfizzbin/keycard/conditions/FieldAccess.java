@@ -14,7 +14,7 @@ final class FieldAccess {
     private FieldAccess() {
     }
 
-    /** An empty {@code Optional} caches a miss, so an absent field isn't re-resolved on every evaluation. */
+    // An empty Optional caches a miss, so an absent field isn't re-resolved on every evaluation.
     private static final ClassValue<Map<String, Optional<Accessor>>> ACCESSORS = new ClassValue<>() {
         @Override
         protected Map<String, Optional<Accessor>> computeValue(Class<?> type) {

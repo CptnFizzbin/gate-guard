@@ -44,7 +44,6 @@ public class CodeReviewRegressionTest {
         PolicyDefinition def = new PolicyDefinition().rules(rules);
         Policy policy = new Policy(def);
 
-        // Neither the list passed in nor the definition's own rules can reach the Policy.
         rules.add(new PolicyDefinition.Rule("allow", "delete", "doc"));
         assertThrows(UnsupportedOperationException.class,
             () -> def.rules().add(new PolicyDefinition.Rule("allow", "delete", "doc")));
@@ -53,6 +52,8 @@ public class CodeReviewRegressionTest {
         assertFalse(policy.can(DELETE, DOC));
 
     }
+
+    // --- structural checks run even with emitMeta off ---
 
     @Test
     public void malformedEffectIsRejectedEvenWithEmitMetaOff() {

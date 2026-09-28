@@ -20,6 +20,8 @@ import java.lang.System.Logger;
  * Mutable, shared configuration for {@link PolicyBuilder} and {@code Policy}.
  * Deliberately has no {@code equals}/{@code hashCode}: it holds mutable
  * catalogs and a logger, so identity is the only meaningful equality.
+ * {@code PolicyBuilder} and {@code Policy} read the {@code actions}/{@code subjects}
+ * catalogs once, when constructed; entries added afterwards aren't seen by them.
  */
 @Getter
 @Setter
@@ -34,14 +36,10 @@ public class KeycardConfig {
     private OperatorCatalog operators = new OperatorCatalog();
 
     /**
-     * When {@code true} (the default), KeyCard runs fail-fast catalog checks -
-     * {@link com.cptnfizzbin.keycard.builder.PolicyBuilder}'s {@code allow()}/{@code deny()}
-     * reject a dynamic Action/Subject that isn't registered, and
-     * {@link com.cptnfizzbin.keycard.policy.Policy}'s constructor rejects a
-     * definition that doesn't satisfy its own {@code meta.actions}/{@code meta.subjects}/{@code meta.operators}
-     * - and {@code PolicyBuilder#buildDef()} attaches the derived {@code meta}
-     * block. Set {@code false} to skip both, e.g. in production once CI has run
-     * the checks. Structural rule checks (a malformed rule tuple, a conditional
+     * When {@code true} (the default), {@code PolicyBuilder}'s {@code allow()}/{@code deny()} reject an
+     * unregistered dynamic Action/Subject, {@code Policy}'s constructor rejects a definition that doesn't satisfy
+     * its own {@code meta.actions}/{@code meta.subjects}/{@code meta.operators}, and {@code PolicyBuilder#buildDef()}
+     * attaches the derived {@code meta} block. Structural rule checks (a malformed rule tuple, a conditional
      * both-sides-wildcarded rule) run either way.
      */
     private boolean emitMeta = true;

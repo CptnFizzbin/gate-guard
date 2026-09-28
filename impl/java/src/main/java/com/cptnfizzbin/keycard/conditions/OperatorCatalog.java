@@ -26,10 +26,10 @@ public final class OperatorCatalog {
     /**
      * Registers {@code operator} under its name.
      *
-     * @throws PolicyLoadException if the name doesn't start with {@code "$"}
-     *   (any other condition key is a field name, so it could never be
-     *   dispatched), or an operator with that name is already registered,
-     *   built-in or custom
+     * @throws PolicyLoadException if the name isn't {@code "$"} followed by at
+     *   least one character (any other condition key is a field name, so it
+     *   could never be dispatched), or an operator with that name is already
+     *   registered, built-in or custom
      */
     public OperatorCatalog add(Operator operator) {
         String name = operator.name();

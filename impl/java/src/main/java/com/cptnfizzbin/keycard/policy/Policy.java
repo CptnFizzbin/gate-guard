@@ -122,11 +122,6 @@ public final class Policy {
         }
     }
 
-    /**
-     * Throws a {@link PolicyLoadException} if {@code meta.operators} lists a
-     * name that isn't registered on {@code resolver} (built-in or custom),
-     * whether or not any rule uses it.
-     */
     private static void validateOperatorsRegistered(PolicyDefinition definition, ConditionResolver resolver) {
         PolicyDefinition.Meta meta = definition.meta();
         List<String> declared = meta != null ? meta.operators() : null;
@@ -162,10 +157,6 @@ public final class Policy {
         return any instanceof WildcardToken.Named named && value.equals(named.token());
     }
 
-    /**
-     * @param configActionNames action names that widen {@code meta.actions} beyond what {@code definition.meta} declares
-     * @param configSubjectNames subject names that widen {@code meta.subjects} beyond what {@code definition.meta} declares
-     */
     private static void validateRuleCatalogs(
         PolicyDefinition definition,
         List<PolicyDefinition.Rule> rules,

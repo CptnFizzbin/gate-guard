@@ -12,10 +12,8 @@ final class SubstrPattern {
 
     private static final int CACHE_SIZE = 256;
 
-    /**
-     * Bounded (LRU) because patterns built from per-request data could otherwise
-     * grow it without limit; {@code Optional.empty()} caches a malformed pattern.
-     */
+    // Bounded (LRU) because patterns built from per-request data could otherwise
+    // grow it without limit; Optional.empty() caches a malformed pattern.
     private static final Map<String, Optional<SubstrPattern>> CACHE = Collections.synchronizedMap(
         new LinkedHashMap<>(16, 0.75f, true) {
             @Override

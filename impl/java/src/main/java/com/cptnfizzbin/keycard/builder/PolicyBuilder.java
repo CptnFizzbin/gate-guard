@@ -93,7 +93,8 @@ public class PolicyBuilder {
         return new PolicyDefinition()
             .rules(this.rules)
             // FIXME: emitMeta(false) drops anyAction/anySubject too, so a configured
-            // wildcard token silently stops matching - see #49
+            // wildcard token silently stops matching and a disabled one reverts to
+            // "_ANY_" - see #49
             .meta(config.emitMeta() ? buildMeta() : null);
     }
 

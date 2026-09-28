@@ -30,9 +30,7 @@ import java.util.Objects;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public final class PolicyDefinition {
-    /**
-     * Required SemVer string, e.g. "1.0.0".
-     */
+    /** Required; must satisfy {@link KeyCardVersion#KEYCARD_POLICY_SUPPORTED_VERSIONS} (e.g. {@code "0.1"}). */
     @JsonProperty("version")
     private String version = KeyCardVersion.KEYCARD_POLICY_VERSION.toString();
     /**
@@ -99,7 +97,6 @@ public final class PolicyDefinition {
             return anySubject(Objects.requireNonNull(subject, "subject - use disableAnySubject() to disable the wildcard").name());
         }
 
-        /** Declares {@code value} as the subject wildcard token. */
         public Meta anySubject(String value) {
             this.anySubject = new WildcardToken.Named(Objects.requireNonNull(value, "value - use disableAnySubject() to disable the wildcard"));
             return this;
@@ -126,7 +123,6 @@ public final class PolicyDefinition {
             return anyAction(Objects.requireNonNull(action, "action - use disableAnyAction() to disable the wildcard").name());
         }
 
-        /** Declares {@code value} as the action wildcard token. */
         public Meta anyAction(String value) {
             this.anyAction = new WildcardToken.Named(Objects.requireNonNull(value, "value - use disableAnyAction() to disable the wildcard"));
             return this;

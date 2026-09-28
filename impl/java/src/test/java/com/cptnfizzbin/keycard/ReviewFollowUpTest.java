@@ -148,6 +148,8 @@ public class ReviewFollowUpTest {
         assertThrows(NullPointerException.class, () -> new PolicyDefinition.Meta().anyAction((String) null));
     }
 
+    // --- builder overloads and diagnostics ---
+
     @Test
     public void denyAcceptsSeveralActionsWithACondition() {
         Subject<Flags, ?> flags = new Subject<>("flags");
