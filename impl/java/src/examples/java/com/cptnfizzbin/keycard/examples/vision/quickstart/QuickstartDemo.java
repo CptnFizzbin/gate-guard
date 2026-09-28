@@ -13,11 +13,6 @@ public class QuickstartDemo {
     public static final Action update = new Action("update");
     public static final Action delete = new Action("delete");
 
-    /**
-     * Returns {@code user}'s policy. The user is the only Policy Claim it
-     * needs, and no {@code KeycardConfig} is required: {@code PolicyBuilder}
-     * only needs the Actions/Subjects passed to {@code allow()}/{@code deny()}.
-     */
     public static Policy policyForUser(User user) {
         Condition<ArticleSubject.Claims> isOwner = Condition.eq(ArticleSubject.Claims::ownerId, user.getId());
         Condition<ArticleSubject.Claims> isEditor = Condition.has(ArticleSubject.Claims::editorIds, user.getId());
