@@ -168,10 +168,8 @@ public class Condition<S> {
             );
         }
 
-        // Convert a JavaBean getter name to its field name, e.g.
-        // "getOwnerId" -> "ownerId" - but only when the prefix is followed by
-        // an upper-case letter, so a plain accessor like "isbn()" or
-        // "getaway()" is left as-is rather than mangled to "bn"/"away".
+        // Strip "get"/"is" only before an upper-case letter, so a plain accessor
+        // like "isbn()" or "getaway()" isn't mangled to "bn"/"away".
         String stripped = stripBeanPrefix(methodName, "get");
         if (stripped == null) stripped = stripBeanPrefix(methodName, "is");
         return stripped != null ? stripped : methodName;

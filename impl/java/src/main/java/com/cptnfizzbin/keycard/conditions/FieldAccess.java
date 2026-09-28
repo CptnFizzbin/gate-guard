@@ -14,10 +14,7 @@ final class FieldAccess {
     private FieldAccess() {
     }
 
-    /**
-     * Accessors cached per subject class and field name; an empty
-     * {@code Optional} caches a miss too.
-     */
+    /** An empty {@code Optional} caches a miss, so an absent field isn't re-resolved on every evaluation. */
     private static final ClassValue<Map<String, Optional<Accessor>>> ACCESSORS = new ClassValue<>() {
         @Override
         protected Map<String, Optional<Accessor>> computeValue(Class<?> type) {
@@ -36,9 +33,7 @@ final class FieldAccess {
      * subject's class or a superclass, or else a public no-arg accessor
      * ({@code name()}, {@code getName()}, {@code isName()}). A missing field
      * (or null subject) is absence, not a type issue: it satisfies only a bare
-     * {@code $ne} (see {@link #isBareNe}). Returns {@code false} and logs a
-     * type issue when {@code ctx} doesn't allow field narrowing, i.e. a field
-     * condition nested inside another.
+     * {@code $ne}.
      */
     static boolean check(Object subject, String fieldName, Object condition, OperatorContext ctx) {
         // A second narrowing step is a malformed condition shape, not a data
@@ -78,14 +73,11 @@ final class FieldAccess {
         return ctx.resolveFieldSubcondition(subjectValue, condition);
     }
 
-    /**
-     * {@code trySetAccessible} (rather than {@code setAccessible}) means a
-     * member the module system won't open is skipped instead of throwing
-     * {@code InaccessibleObjectException} out of {@code Policy.can}.
-     */
     private static Optional<Accessor> findAccessor(Class<?> type, String name) {
         if (name.isEmpty()) return Optional.empty();
 
+        // trySetAccessible, not setAccessible: a member the module system won't open
+        // is skipped instead of throwing InaccessibleObjectException out of Policy.can.
         for (Class<?> c = type; c != null && c != Object.class; c = c.getSuperclass()) {
             try {
                 Field field = c.getDeclaredField(name);
@@ -93,7 +85,6 @@ final class FieldAccess {
                     return Optional.of(field::get);
                 }
             } catch (NoSuchFieldException ignored) {
-                // keep walking up the hierarchy
             }
         }
 
@@ -107,13 +98,11 @@ final class FieldAccess {
                     return Optional.of(method::invoke);
                 }
             } catch (NoSuchMethodException ignored) {
-                // try the next naming convention
             }
         }
         return Optional.empty();
     }
 
-    /** Returns {@code true} when {@code condition} is exactly {@code { $ne: ... }}; a {@code $ne} alongside other keys, or nested deeper, doesn't count. */
     private static boolean isBareNe(Object condition) {
         // TODO: decide whether { $not: { $eq: x } } on a missing field should
         // also be true, since $not carries the same "exact negation" contract as $ne.

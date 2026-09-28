@@ -10,7 +10,7 @@ import java.util.Map;
  * A {@code key -> Action} catalog. Each key is the name its Action serializes
  * as: {@link #add(Action)} keys an Action by its own name, and
  * {@link #add(String, Action)} gives an explicit key, which a dynamic Action
- * requires. {@link #asMap()} is a read-only view.
+ * requires.
  */
 public final class ActionCatalog {
     private final Map<String, Action> entries = new LinkedHashMap<>();
@@ -22,9 +22,10 @@ public final class ActionCatalog {
     }
 
     /**
-     * Registering the same Action under the same key again is a no-op; a
-     * different Action under an already-used key throws rather than silently
-     * replacing the first.
+     * Registers {@code action} under {@code name}; registering the same Action
+     * under the same key again is a no-op.
+     *
+     * @throws PolicyArgumentException if a different Action is already registered under {@code name}
      */
     public ActionCatalog add(String name, Action action) {
         Action existing = entries.putIfAbsent(name, action);

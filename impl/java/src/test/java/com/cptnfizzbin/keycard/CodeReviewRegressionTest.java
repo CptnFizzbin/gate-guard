@@ -54,8 +54,6 @@ public class CodeReviewRegressionTest {
 
     }
 
-    // --- structural validation isn't gated by emitMeta ---
-
     @Test
     public void malformedEffectIsRejectedEvenWithEmitMetaOff() {
         PolicyDefinition def = new PolicyDefinition()
@@ -73,7 +71,7 @@ public class CodeReviewRegressionTest {
 
     }
 
-    // --- $eq/$in/$has use value equality across boxed numeric types ---
+    // --- $eq/$in/$has: cross-type numeric equality and any-Collection operands ---
 
     @Test
     public void integerConditionMatchesLongField() {

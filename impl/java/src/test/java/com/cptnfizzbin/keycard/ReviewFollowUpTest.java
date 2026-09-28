@@ -24,11 +24,6 @@ import java.util.function.Supplier;
 
 import static org.junit.Assert.*;
 
-/**
- * Coverage for the follow-up review changes: field access, record accessor
- * names, immutable rules, catalog/operator registration checks, explicit
- * wildcard disabling, allow/deny symmetry, and logger-routed diagnostics.
- */
 public class ReviewFollowUpTest {
     public record Flags(boolean isActive, String owner) {}
 
@@ -38,7 +33,6 @@ public class ReviewFollowUpTest {
 
     public static class Derived extends Base {}
 
-    /** No backing field for "fullName" - only a getter. */
     public static class Person {
         private final String first = "Ada";
         private final String last = "Lovelace";
@@ -62,8 +56,7 @@ public class ReviewFollowUpTest {
 
     @Test
     public void objectMethodsAreNeverSubjectFields() {
-        // getClass() must not make "class" look like a field.
-        // A missing field: $eq is false and a bare $ne is true.
+        // getClass() must not surface a "class" field, so "class" is missing: $eq is false, a bare $ne true.
         assertFalse(new ConditionResolver().evaluate(new Person(), Map.of("class", Map.of("$eq", Person.class))));
         assertTrue(new ConditionResolver().evaluate(new Person(), Map.of("class", Map.of("$ne", Person.class))));
     }
@@ -149,13 +142,11 @@ public class ReviewFollowUpTest {
     }
 
     @Test
-    public void nullNoLongerMeansDisabled() {
+    public void nullWildcardArgumentsAreRejected() {
         assertThrows(PolicyArgumentException.class, () -> new KeycardConfig().anyAction(null));
         assertThrows(PolicyArgumentException.class, () -> new KeycardConfig().anySubject(null));
         assertThrows(NullPointerException.class, () -> new PolicyDefinition.Meta().anyAction((String) null));
     }
-
-    // --- allow/deny symmetry ---
 
     @Test
     public void denyAcceptsSeveralActionsWithACondition() {
@@ -172,8 +163,6 @@ public class ReviewFollowUpTest {
         assertFalse(policy.can(write, flags.wrap(new Flags(true, "mallory"))));
         assertFalse(policy.can(read, flags.wrap(new Flags(true, "mallory"))));
     }
-
-    // --- diagnostics go to the configured logger ---
 
     @Test
     public void typeIssuesAreReportedToTheConfiguredLogger() {

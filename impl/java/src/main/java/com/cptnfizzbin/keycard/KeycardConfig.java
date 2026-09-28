@@ -55,20 +55,19 @@ public class KeycardConfig {
      */
     private boolean emitTests = false;
 
-    /**
-     * The action wildcard token: {@code null} when never configured (so a
-     * built {@code meta.anyAction} stays undeclared), or
-     * {@link WildcardToken.Disabled} when disabled via {@link #disableAnyAction()}.
-     */
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
     private WildcardToken anyAction = null;
 
-    /** The subject wildcard token, symmetric with {@link #anyAction}. */
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
     private WildcardToken anySubject = null;
 
+    /**
+     * The action wildcard token: {@code null} when never configured (a built
+     * {@code meta.anyAction} stays undeclared), or {@link WildcardToken.Disabled}
+     * after {@link #disableAnyAction()}.
+     */
     public WildcardToken anyAction() {
         return this.anyAction;
     }

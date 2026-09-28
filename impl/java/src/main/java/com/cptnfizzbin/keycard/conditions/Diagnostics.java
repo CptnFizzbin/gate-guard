@@ -11,7 +11,6 @@ import java.lang.System.Logger.Level;
 final class Diagnostics {
     private static final String DIAGNOSTIC_PREFIX = "[KeyCard]";
 
-    /** Used when no {@code KeycardConfig} logger was supplied. */
     static final Logger DEFAULT_LOGGER = System.getLogger("Keycard");
 
     private Diagnostics() {}

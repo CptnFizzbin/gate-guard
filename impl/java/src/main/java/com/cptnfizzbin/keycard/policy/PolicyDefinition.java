@@ -195,7 +195,7 @@ public final class PolicyDefinition {
             this.conditions = conditions != null ? freezeMap(conditions) : null;
         }
 
-        /** Recursively copies a Conditions tree into unmodifiable maps/lists - {@code null} values are kept (an explicit {@code $eq: null}). */
+        // Not Map.copyOf/List.copyOf, which reject nulls: an explicit { $eq: null } must survive the copy.
         private static Map<String, Object> freezeMap(Map<?, ?> map) {
             Map<String, Object> copy = new LinkedHashMap<>();
             map.forEach((k, v) -> copy.put(String.valueOf(k), freeze(v)));

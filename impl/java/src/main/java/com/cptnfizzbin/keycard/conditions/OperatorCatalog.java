@@ -15,7 +15,6 @@ import java.util.Set;
  * can't be removed or replaced.
  */
 public final class OperatorCatalog {
-    /** The names of every built-in operator, which a new catalog registers by default. */
     public static final Set<String> BUILTIN_NAMES = DefaultOperators.NAMES;
 
     private final Map<String, Operator> operators = new LinkedHashMap<>();
@@ -58,8 +57,8 @@ public final class OperatorCatalog {
      * Registers a flat {@link ConditionOperator} under {@code name} and
      * returns it.
      *
-     * @throws PolicyLoadException if an operator named {@code name} is already
-     *   registered, built-in or custom
+     * @throws PolicyLoadException if {@code name} isn't a valid operator name
+     *   (see {@link #add}) or is already registered, built-in or custom
      */
     public ConditionOperator set(String name, ConditionOperator operator) {
         this.add(Operator.of(name, (subject, value, ctx) -> operator.resolve(subject, value)));
@@ -80,7 +79,7 @@ public final class OperatorCatalog {
         return Collections.unmodifiableSet(operators.keySet());
     }
 
-    /** Every registered operator name that isn't one of the built-ins - what {@code meta.operators} derives from usage. */
+    /** Every registered operator name that isn't a built-in, in registration order. */
     public Set<String> customNames() {
         Set<String> names = new LinkedHashSet<>(operators.keySet());
         names.removeAll(BUILTIN_NAMES);
