@@ -10,20 +10,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * bare-key and `$field` long-form field access - shared
- * by {@link ConditionResolver}'s non-`$`-prefixed dispatch and the `$field`
- * {@link Operator} in {@link DefaultOperators}, since both resolve to the
- * exact same "look up a named field on the subject, then recurse" behavior.
- */
 final class FieldAccess {
     private FieldAccess() {
     }
 
     /**
-     * Resolved accessors, cached per subject class and field name - an empty
-     * {@code Optional} records "no such field" so a miss isn't re-reflected
-     * on every evaluation either.
+     * Accessors cached per subject class and field name; an empty
+     * {@code Optional} caches a miss too.
      */
     private static final ClassValue<Map<String, Optional<Accessor>>> ACCESSORS = new ClassValue<>() {
         @Override
@@ -38,32 +31,27 @@ final class FieldAccess {
     }
 
     /**
-     * a missing field (or a non-object subject) makes the
-     * whole field-condition false - absence, not a type issue - with one
-     * exception: {@code $ne}, which MUST be the exact negation of
-     * {@code $eq} even when the field is missing, since {@code $eq} on a
-     * missing field is false. See {@link #isBareNe}.
-     *
-     * <p>v1 supports only top-level field access: a field condition MUST NOT
-     * itself narrow into another field, so {@code ctx.canNarrowField()} MUST
-     * still be {@code true} at this point in the tree. When it isn't - a
-     * field condition already reached by one narrowing step attempting a
-     * second - this is a structural problem, not a data one, so it's
-     * diagnosed like any other malformed condition shape rather than
-     * silently returning {@code false}.
-     *
-     * <p>A {@link Map} subject is read by key. Any other object is read by
-     * {@link #findAccessor}: a field declared on its class or any superclass
-     * first, then a public no-arg accessor method ({@code name()},
-     * {@code getName()}, {@code isName()}).
+     * Evaluates {@code condition} against the {@code fieldName} field of
+     * {@code subject}: a {@link Map} key, or else a field declared on the
+     * subject's class or a superclass, or else a public no-arg accessor
+     * ({@code name()}, {@code getName()}, {@code isName()}). A missing field
+     * (or null subject) is absence, not a type issue: it satisfies only a bare
+     * {@code $ne} (see {@link #isBareNe}). Returns {@code false} and logs a
+     * type issue when {@code ctx} doesn't allow field narrowing, i.e. a field
+     * condition nested inside another.
      */
     static boolean check(Object subject, String fieldName, Object condition, OperatorContext ctx) {
+        // A second narrowing step is a malformed condition shape, not a data
+        // mismatch, so it's diagnosed rather than silently returning false.
         if (!ctx.canNarrowField()) {
             ctx.reportTypeIssue(fieldName,
                 "v1 supports only top-level field access - a field condition can't itself narrow into another field");
             return false;
         }
 
+        // The spec requires $ne to be the exact negation of $eq, and $eq on a
+        // missing field is false, so a bare $ne on a missing field must be true;
+        // every other condition on a missing field is false.
         if (subject instanceof Map<?, ?> map) {
             if (!map.containsKey(fieldName)) return isBareNe(condition);
             return ctx.resolveFieldSubcondition(map.get(fieldName), condition);
@@ -125,18 +113,10 @@ final class FieldAccess {
         return Optional.empty();
     }
 
-    /**
-     * The `$ne`-on-a-missing-field carve-out is narrow: it
-     * only fires when `$ne` is itself the sole nested condition being
-     * evaluated at the missing field, not when it's one key among several
-     * in a multi-key condition object or nested deeper -
-     * {@code { status: { $not: { $eq: "archived" } } } } on a missing
-     * {@code status} still gets the blanket {@code false}, unlike a bare
-     * {@code { status: { $ne: "archived" } } }, even though {@code $not}
-     * has the same "exact negation" contract {@code $ne} does.
-     * Undecided whether that should change; not addressed here.
-     */
+    /** Returns {@code true} when {@code condition} is exactly {@code { $ne: ... }}; a {@code $ne} alongside other keys, or nested deeper, doesn't count. */
     private static boolean isBareNe(Object condition) {
+        // TODO: decide whether { $not: { $eq: x } } on a missing field should
+        // also be true, since $not carries the same "exact negation" contract as $ne.
         return condition instanceof Map && ((Map<?, ?>) condition).keySet().equals(Set.of("$ne"));
     }
 }

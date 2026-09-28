@@ -19,14 +19,10 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * The PolicyDefinition document shape, Jackson-annotated
- * so any consumer with a Jackson (de)serializer for their format of
- * choice - YAML, JSON, ... - can bind a document straight to/from this
- * type. This only pulls in jackson-databind (for the annotation types
- * and the custom {@link WildcardToken} (de)serializers below), not a
- * format module, so KeyCard itself still never reads or writes
- * policy.yaml text - resolving a document's actual bytes is left to
- * whatever format module a consumer picks.
+ * The PolicyDefinition document shape, Jackson-annotated so a document can be
+ * bound to and from any format a Jackson format module supports (YAML, JSON,
+ * ...). KeyCard itself never reads or writes policy text; the consumer picks
+ * the format module.
  */
 @Data
 @Accessors(fluent = true, chain = true)
@@ -56,13 +52,13 @@ public final class PolicyDefinition {
     @Setter(AccessLevel.NONE)
     private List<Rule> rules = new ArrayList<>();
 
-    /** An unmodifiable snapshot of the rules, in declaration order. */
+    /** Returns an unmodifiable snapshot of the rules, in declaration order. */
     public List<Rule> rules() {
-        // null when a bound document says "rules: null"
+        // A document bound with "rules: null" leaves the field null.
         return rules != null ? List.copyOf(rules) : List.of();
     }
 
-    /** Replaces the rules with a copy of {@code rules}, so later changes to the passed list don't leak in. */
+    /** Replaces the rules with a copy of {@code rules}, so later changes to the passed list don't affect this definition. */
     public PolicyDefinition rules(List<Rule> rules) {
         this.rules = new ArrayList<>(rules);
         return this;
@@ -154,9 +150,9 @@ public final class PolicyDefinition {
     }
 
     /**
-     * `[Effect, Action, Subject, Conditions?]`. Ordered; declaration order is significant.
-     * {@code @JsonFormat(shape = ARRAY)} binds this straight from/to that tuple, positionally, rather than an
-     * `{effect, action, ...}` object.
+     * A rule tuple, {@code [Effect, Action, Subject, Conditions?]}, serialized
+     * positionally as an array. Declaration order within {@code rules} is
+     * significant.
      */
     @Getter
     @Accessors(fluent = true)

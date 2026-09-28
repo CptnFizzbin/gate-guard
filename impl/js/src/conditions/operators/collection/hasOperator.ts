@@ -1,7 +1,7 @@
 import { PolicyTypeMismatchError } from "../../../errors/policyTypeMismatchError.ts"
 import { createOperator } from "../operator.ts"
 
-/** `$has` - `subject` MUST be an array. */
+/** `$has` - true when the `subject` array contains the operand. `subject` MUST be an array. */
 export const HasOperator = createOperator("$has", (subject, value) => {
   if (!Array.isArray(subject)) {
     throw new PolicyTypeMismatchError({ subject: { expected: "array", received: typeof subject } })

@@ -6,16 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-/**
- * a small, non-regex substring pattern language, implemented by
- * compiling it to a Java regex - the spec explicitly permits this
- * ("Implementations MAY implement $substr however they like internally
- * (including compiling it to the host language's native regex engine, e.g.
- * translating `*` to `.*` and escaping literal segments)"). {@link #parse}
- * returns {@code null} for a structurally invalid pattern (an unescaped
- * "^" anywhere but the first character, or an unescaped "$" anywhere but
- * the last).
- */
+/** A parsed {@code $substr} pattern (syntax: see {@link Condition#substr}); a trailing backslash is ignored. */
 final class SubstrPattern {
     private final Pattern compiled;
 
@@ -39,11 +30,16 @@ final class SubstrPattern {
         this.compiled = compiled;
     }
 
-    /** {@link #parse}, memoized - returns {@code null} for a malformed pattern. */
+    /** Same as {@link #parse}, but memoized. */
     static SubstrPattern cached(String raw) {
         return CACHE.computeIfAbsent(raw, r -> Optional.ofNullable(parse(r))).orElse(null);
     }
 
+    /**
+     * Returns the parsed pattern, or {@code null} if it is structurally
+     * invalid: an unescaped {@code ^} anywhere but first, or an unescaped
+     * {@code $} anywhere but last.
+     */
     static SubstrPattern parse(String raw) {
         StringBuilder regex = new StringBuilder();
         int n = raw.length();
@@ -53,26 +49,18 @@ final class SubstrPattern {
 
             switch (c) {
                 case '\\':
-                    // "\\" escapes the very next character, whatever it is,
-                    // to a literal - a trailing "\\" with nothing following
-                    // it is simply ignored.
                     if (i + 1 >= n) break;
                     regex.append(Pattern.quote(String.valueOf(raw.charAt(i + 1))));
-                    i++; // skip the escaped character
+                    i++;
                     break;
                 case '*':
-                    // Zero or more characters; a run of consecutive "*" is
-                    // match-equivalent to a single one.
                     regex.append(".*");
                     break;
                 case '^':
-                    // Only meaningful as the pattern's first character -
-                    // anywhere else it's a structurally invalid pattern.
                     if (i != 0) return null;
                     regex.append('^');
                     break;
                 case '$':
-                    // Only meaningful as the pattern's last character.
                     if (i != n - 1) return null;
                     regex.append('$');
                     break;

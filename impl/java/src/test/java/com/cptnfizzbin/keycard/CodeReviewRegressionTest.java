@@ -18,14 +18,12 @@ import java.util.Set;
 
 import static org.junit.Assert.*;
 
-/**
- * Regression coverage for bugs found in a review of the Java implementation.
- */
 public class CodeReviewRegressionTest {
     public record Doc(long ownerId, Set<String> tags, String isbn) {}
 
     private static final Action READ = new Action("read");
     private static final Action DELETE = new Action("delete");
+
     private static final Subject<Doc, ?> DOC = new Subject<>("doc");
 
     // --- a built Policy is isolated from later mutation ---
@@ -53,6 +51,7 @@ public class CodeReviewRegressionTest {
         def.rules(List.of(new PolicyDefinition.Rule("allow", "delete", "doc")));
 
         assertFalse(policy.can(DELETE, DOC));
+
     }
 
     // --- structural validation isn't gated by emitMeta ---
@@ -71,6 +70,7 @@ public class CodeReviewRegressionTest {
             .rules(List.of(new PolicyDefinition.Rule("allow", null, "doc")));
 
         assertThrows(PolicyLoadException.class, () -> new Policy(def, new KeycardConfig().emitMeta(false)));
+
     }
 
     // --- $eq/$in/$has use value equality across boxed numeric types ---
@@ -102,6 +102,7 @@ public class CodeReviewRegressionTest {
 
         assertTrue(policy.can(READ, DOC.wrap(new Doc(1, Set.of("public"), "x"))));
         assertTrue(new ConditionResolver().evaluate(3, Map.of("$in", Set.of(1, 2, 3))));
+
     }
 
     // --- field names derived from method references ---

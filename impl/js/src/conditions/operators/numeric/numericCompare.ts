@@ -1,11 +1,11 @@
 import { PolicyTypeMismatchError } from "../../../errors/policyTypeMismatchError.ts"
 
 /**
- * the numeric comparison shared by `$gt`/`$gte`/`$lt`/`$lte` -
- * `subject` and the operand MUST both be numbers (never coerced - no
- * numeric-string parsing, no lexicographic comparison) and comparison
- * MUST use IEEE-754 double semantics, so `NaN` never compares true here
- * even though some host languages treat `NaN` as equal to itself.
+ * Applies `cmp` to `subject` and `value` for `$gt`/`$gte`/`$lt`/`$lte`. Both
+ * MUST be numbers - never coerced from strings - and comparison uses
+ * IEEE-754 double semantics, so `NaN` never compares true.
+ *
+ * @throws PolicyTypeMismatchError if `subject` or `value` isn't a number
  */
 export function numericCompare(
   subject: unknown,

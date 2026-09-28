@@ -3,12 +3,14 @@ import { escapeRegExp } from "../../../lib/regex.ts"
 import { createOperator } from "../operator.ts"
 
 /**
- * `$substr` - a small, deliberately non-regex substring pattern
- * language, compiled here to a native `RegExp` (the spec explicitly
- * permits this: implementations MAY implement `$substr` however they
- * like internally, including compiling it to the host language's regex
- * engine, as long as the observable match/no-match result agrees with
- * the spec for every subject/pattern).
+ * `$substr` - matches the subject's string form against a small, non-regex
+ * pattern: `*` matches any run of characters, a leading `^` or trailing `$`
+ * anchors the match, and `\` escapes the next character. Unanchored
+ * patterns match anywhere in the subject.
+ *
+ * ```ts
+ * { title: { $substr: "^Draft:*" } }
+ * ```
  */
 export const SubstrOperator = createOperator("$substr", (subject, pattern) => {
   if (subject === null || subject === undefined) return false
@@ -32,22 +34,19 @@ export const SubstrOperator = createOperator("$substr", (subject, pattern) => {
         if (!next) break
 
         regexPattern += escapeRegExp(next)
-        i++ // skip next
+        i++
 
         break
       case "*":
         regexPattern += ".*"
         break
       case "^":
-        // Only meaningful as the pattern's first character - anywhere
-        // else it's a structurally invalid pattern.
         if (i !== 0) throw new PolicyTypeMismatchError({
           value: { expected: "'^' only as the first character", received: `'^' at position ${i}` },
         })
         regexPattern += "^"
         break
       case "$":
-        // Only meaningful as the pattern's last character.
         if (i !== pattern.length - 1) throw new PolicyTypeMismatchError({
           value: { expected: "'$' only as the last character", received: `'$' at position ${i}` },
         })
@@ -58,8 +57,6 @@ export const SubstrOperator = createOperator("$substr", (subject, pattern) => {
     }
   }
 
-  // The "s" flag makes "." match newlines too, so a wildcard is truly
-  // "any character", per the requirement that lazy/greedy wildcards be
-  // match-equivalent (both just need one gap-filling run of characters).
+  // "s" so * also spans newlines - a wildcard means any character.
   return !!(new RegExp(regexPattern, "s").exec(subjectStr))
 })

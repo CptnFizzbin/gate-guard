@@ -9,29 +9,28 @@ import java.util.function.Function;
 import com.cptnfizzbin.keycard.errors.PolicyArgumentException;
 
 /**
- * Resolves a {@code KeycardConfig}'s {@code actions}/{@code subjects}
- * catalog into the reverse {@code raw name -> catalog key} map {@code
- * PolicyBuilder}/{@code Policy} use to resolve a dynamic Action/Subject's
- * random name into its real, serializable one, plus the full list of names
- * to fold into {@code meta.actions}/{@code meta.subjects}.
+ * Resolves an action/subject catalog into the names it serializes as,
+ * including a dynamic Action/Subject's catalog key in place of its random name.
  */
 public final class Catalog {
     private Catalog() {}
 
     /**
-     * @param reverseMap raw name (a dynamic Action/Subject's random id, or a
-     *   named one's own name) -> catalog key.
-     * @param names every catalog key, in registration order.
+     * @param reverseMap raw name (e.g. a dynamic Action/Subject's random id) ->
+     *   catalog key
+     * @param names every catalog key, in registration order
      */
     public record Resolution(Map<String, String> reverseMap, List<String> names) {}
 
     /**
-     * @param catalog the keyed catalog (e.g. {@code
-     *   KeycardConfig.actions().asMap()}) - each key becomes the serialized
-     *   name for its entry.
-     * @param nameOf reads an entry's own (possibly dynamic/random) name.
-     * @param kind used only to name the vocabulary ("action"/"subject") in
-     *   a duplicate-registration error message.
+     * Resolves {@code catalog} into a {@link Resolution}.
+     *
+     * @param catalog keyed vocabulary, each key becoming its entry's
+     *   serialized name; may be {@code null}
+     * @param nameOf reads an entry's own (possibly random) name
+     * @param kind names the vocabulary ("action"/"subject") in error messages
+     * @throws PolicyArgumentException if one entry is registered under more
+     *   than one key
      */
     public static <T> Resolution build(Map<String, ? extends T> catalog, Function<T, String> nameOf, String kind) {
         List<String> names = new ArrayList<>();
@@ -56,7 +55,6 @@ public final class Catalog {
         return new Resolution(reverseMap, names);
     }
 
-    /** Resolves {@code rawName} (an Action/Subject's own name, dynamic or not) to its catalog key, or returns it unchanged when it isn't a registered catalog entry. */
     public static String resolveName(Map<String, String> reverseMap, String rawName) {
         String resolved = reverseMap.get(rawName);
         return resolved != null ? resolved : rawName;

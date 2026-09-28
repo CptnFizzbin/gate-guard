@@ -1,12 +1,9 @@
 package com.cptnfizzbin.keycard.conditions;
 
 /**
- * Passed to every {@link Operator}'s {@code resolve} call - built-in and
- * custom alike - so it can recurse into the condition language exactly the
- * way $and/$or/$not do. This is what gives a
- * custom, host-application-supplied operator the same recursive power a
- * built-in one has, rather than being limited to a flat
- * {@code (subject, value) -> boolean} check.
+ * Passed to every {@link Operator}'s {@code resolve} call, built-in and custom
+ * alike, so an operator can evaluate nested conditions the same way
+ * {@code $and}/{@code $or}/{@code $not} do.
  */
 public interface OperatorContext {
     /**
@@ -24,9 +21,9 @@ public interface OperatorContext {
     boolean resolveFieldSubcondition(Object subject, Object condition);
 
     /**
-     * True if a field condition (bare-key or {@code $field}) is still
-     * allowed to narrow at this point in the tree - v1 permits exactly one
-     * level.
+     * Returns {@code true} if a field condition (bare-key or {@code $field})
+     * may still narrow at this point in the tree - the spec permits exactly
+     * one level.
      */
     boolean canNarrowField();
 

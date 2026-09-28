@@ -7,15 +7,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * A {@code name -> Action} catalog - both a self-keyed vocabulary
- * declaration ({@link #add(Action)}, keyed by the Action's own name) and an
- * explicitly-keyed catalog ({@link #add(String, Action)}, required for a
- * dynamic Action) share this one map. {@code PolicyBuilder}/{@code Policy}
- * resolve it into the actual {@code id -> catalog key} reverse lookup once,
- * at construction, via {@code lib.Catalog}.
- * <p>
- * Wraps its map rather than extending one, so every registration goes
- * through the checks below - {@link #asMap()} is a read-only view.
+ * A {@code key -> Action} catalog. Each key is the name its Action serializes
+ * as: {@link #add(Action)} keys an Action by its own name, and
+ * {@link #add(String, Action)} gives an explicit key, which a dynamic Action
+ * requires. {@link #asMap()} is a read-only view.
  */
 public final class ActionCatalog {
     private final Map<String, Action> entries = new LinkedHashMap<>();
@@ -52,9 +47,9 @@ public final class ActionCatalog {
     }
 
     /**
-     * Registers {@code action} under its own name and returns {@code
-     * action} itself - the single-arg counterpart of {@link #set(String, Action)}
-     * for a non-dynamic Action that already carries its own name.
+     * Registers {@code action} under its own name and returns it.
+     *
+     * @throws PolicyArgumentException if {@code action} is dynamic
      */
     public Action set(Action action) {
         this.add(action);

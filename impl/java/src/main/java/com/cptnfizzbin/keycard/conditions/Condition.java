@@ -16,6 +16,8 @@ public class Condition<S> {
     private final Map<String, Object> condition;
 
     private Condition(String field, String operator, Object value) {
+        // A bare key starting with "$" would be read as an operator, so such a
+        // field is addressed through the explicit $field tuple instead.
         if (field.startsWith("$")) {
             this.condition = Map.of("$field", List.of(field, Collections.singletonMap(operator, value)));
         } else {
@@ -80,7 +82,10 @@ public class Condition<S> {
     }
 
     /**
-     * $substr - a small, non-regex substring pattern language.
+     * Matches when the field's string form matches the {@code $substr}
+     * {@code pattern}: {@code *} matches any run of characters, a leading
+     * {@code ^} or trailing {@code $} anchors, and a backslash escapes the next
+     * character. An unanchored pattern matches anywhere in the value.
      */
     public static <T> Condition<T> substr(FieldGetter<T, String> getter, String pattern) {
         return new Condition<>(extractFieldName(getter), "$substr", pattern);

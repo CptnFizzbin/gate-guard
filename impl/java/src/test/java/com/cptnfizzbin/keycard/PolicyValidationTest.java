@@ -23,7 +23,7 @@ import java.util.Map;
 import static org.junit.Assert.*;
 
 /**
- * Construction-time validation required by the spec but not covered by the allow/deny-outcome-only v1 conformance suite (see test/fixtures/v1/README.md's Scope section).
+ * Construction-time validation required by the spec but not covered by the allow/deny-outcome-only conformance suite (see test/fixtures/v0/README.md's Scope section).
  */
 public class PolicyValidationTest {
     private static KeycardConfig withOperators(Operator... operators) {
@@ -95,8 +95,6 @@ public class PolicyValidationTest {
             ));
     }
 
-    // --- Issue 3: operator registry collisions ---
-
     @Test
     public void throwsPolicyLoadExceptionWhenACustomOperatorCollidesWithABuiltin() {
         assertThrows(PolicyLoadException.class, () ->
@@ -113,17 +111,13 @@ public class PolicyValidationTest {
             )));
     }
 
-    // --- Issue 4: meta.operators promotes "cataloged but never registered" to a construction-time throw ---
     // Spec: https://keycard.cptnfizzbin.dev/spec/v0#metaoperators
 
     @Test
     public void throwsPolicyLoadExceptionWhenMetaOperatorsDeclaresANameNothingIsRegisteredFor() {
         PolicyDefinition.Meta meta = new PolicyDefinition.Meta().operators(List.of("$hasRole"));
 
-        // Unlike the uncataloged-operator case above, this throws even though no rule references
-        // $hasRole at all - meta.operators' registration requirement is
-        // checked in full when loading a policy, not merely for names rules
-        // actually use.
+        // Throws even though no rule uses $hasRole: every meta.operators entry must be registered.
         assertThrows(PolicyLoadException.class, () ->
             new Policy(new PolicyDefinition().meta(meta)));
     }
@@ -145,8 +139,6 @@ public class PolicyValidationTest {
         ); // should not throw
     }
 
-    // --- Issue 5: meta.anyAction/meta.anySubject four-way dispatch ---
-
     @Test
     public void falseDisablesTheActionWildcardJustLikeNull() {
         PolicyDefinition.Meta meta = new PolicyDefinition.Meta().anyAction(false);
@@ -161,7 +153,7 @@ public class PolicyValidationTest {
         assertTrue(policy.can(new Action("_ANY_"), new Subject<>("Article")));
     }
 
-    // --- PolicyBuilder derives meta.actions/subjects/operators from usage; only the wildcard tokens are ever declared explicitly ---
+    // --- PolicyBuilder meta derivation ---
 
     @Test
     public void buildDefDerivesActionsSubjectsAndOperatorsFromWhatWasActuallyUsed() {
@@ -187,10 +179,7 @@ public class PolicyValidationTest {
             .allow(new Action("Read"), new Subject<>("Article"))
             .buildDef();
 
-        // Undeclared -> null on Meta, so Wildcards.effectiveAnyAction/
-        // effectiveAnySubject fall back to the "_ANY_" default - a
-        // PolicyBuilder() with no wildcard args MUST NOT come out as
-        // "explicitly disabled" (that's what WildcardToken.of(null) means).
+        // Undeclared (null), not Disabled - WildcardToken.Disabled would turn the wildcard off.
         assertEquals(null, def.meta().anyAction());
         assertEquals(null, def.meta().anySubject());
     }
@@ -202,8 +191,6 @@ public class PolicyValidationTest {
             .allow(new Action("Read"), new Subject<>("*"))
             .build();
 
-        // "*" is now the action wildcard token: a rule naming it as its
-        // action matches any incoming action.
         assertTrue(policy.can(new Action("AnythingGoes"), new Subject<>("Article")));
 
         // The subject wildcard is disabled (false): a rule's literal "*"
@@ -272,12 +259,8 @@ public class PolicyValidationTest {
             .allow(new Action("Read"), AnySubject)
             .build();
 
-        // "*" is now the action wildcard token: a rule naming it as its
-        // action matches any incoming action.
         assertTrue(policy.can(new Action("AnythingGoes"), new Subject<>("Article")));
 
-        // "*" is also now the subject wildcard token: a rule naming it as
-        // its subject matches any incoming subject.
         assertTrue(policy.can(new Action("Read"), new Subject<>("AnySubjectName")));
         assertTrue(policy.can(new Action("Read"), new Subject<>("*")));
     }

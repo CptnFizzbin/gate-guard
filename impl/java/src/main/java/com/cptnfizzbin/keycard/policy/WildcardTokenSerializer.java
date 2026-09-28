@@ -6,13 +6,7 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 
 import java.io.IOException;
 
-/**
- * Writes a {@link WildcardToken} back out as the raw scalar
- * form it was read from - a {@link WildcardToken.Named}'s token
- * string, or {@code null} for {@link WildcardToken.Disabled} - never the
- * record's own field shape. Paired with {@link WildcardTokenDeserializer}
- * so a {@link PolicyDefinition} round-trips through Jackson unchanged.
- */
+/** Writes a {@link WildcardToken} as its raw scalar (the token string, or {@code null} when disabled) so a {@link PolicyDefinition} round-trips unchanged. */
 final class WildcardTokenSerializer extends JsonSerializer<WildcardToken> {
     @Override
     public void serialize(WildcardToken value, JsonGenerator gen, SerializerProvider serializers) throws IOException {

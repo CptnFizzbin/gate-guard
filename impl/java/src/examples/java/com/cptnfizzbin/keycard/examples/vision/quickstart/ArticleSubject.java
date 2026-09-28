@@ -9,9 +9,7 @@ import java.util.List;
 /**
  * website/docs-java/vision-quickstart.md's {@code ArticleSubject.java} -
  * a dedicated Subject subclass, scoped to just the Claims its Conditions
- * need rather than the whole {@link Article}. {@code copy()} calls its own
- * private constructor, so {@link #from} returns {@code ArticleSubject}
- * itself with no cast anywhere - see {@link Subject}'s class doc.
+ * need rather than the whole {@link Article}.
  */
 public final class ArticleSubject extends Subject<ArticleSubject.Claims, ArticleSubject> {
     public ArticleSubject(String name) {
