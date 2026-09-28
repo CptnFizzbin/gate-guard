@@ -8,7 +8,6 @@ import { PolicyLoadException } from "../errors/index.ts"
  */
 export const DISABLED: unique symbol = Symbol("keycard:wildcard-disabled")
 
-/** The wildcard token every policy uses for a position whose `meta.anyAction`/`meta.anySubject` is undeclared. */
 export const DEFAULT_WILDCARD = "_ANY_"
 
 /**

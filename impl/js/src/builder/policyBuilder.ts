@@ -14,7 +14,6 @@ import { KEYCARD_POLICY_VERSION } from "../version.ts"
 
 export const BUILDER_VERSION = KEYCARD_POLICY_VERSION
 
-/** Returns the serialized wildcard token for `value`: `null` or `false` disables the wildcard; `undefined` selects the default. */
 function wildcardNameOf(
   value: Action | Subject | string | false | undefined | null,
   reverseMap: Map<string, string>,

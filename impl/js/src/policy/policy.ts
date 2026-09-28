@@ -41,7 +41,7 @@ function collectCustomOperators(condition: AnyCondition | undefined, out: Set<st
   }
 }
 
-/** Returns a deep copy of `definition`, except the opaque `meta.application`, which is kept by reference. */
+/** Returns a deep copy of `definition`, except `meta.application`, which is kept by reference: it's opaque application data that may not be structured-cloneable. */
 function cloneDefinition(definition: PolicyDefinition): PolicyDefinition {
   const { meta, rules, ...rest } = definition
   const clone: PolicyDefinition = { ...rest, rules: rules.map((rule) => structuredClone(rule)) }
@@ -53,7 +53,6 @@ function cloneDefinition(definition: PolicyDefinition): PolicyDefinition {
   return clone
 }
 
-/** Throws a `PolicyLoadException` unless `entries` is absent or an array of unique strings. */
 function validateCatalog(entries: unknown, field: string): void {
   if (entries === undefined) return
   if (!Array.isArray(entries)) {
@@ -176,11 +175,6 @@ export class Policy<
     }
   }
 
-  /**
-   * Throws a `PolicyLoadException` unless each declared `meta` catalog is an
-   * array of unique strings and every `meta.operators` entry is a `$`-prefixed,
-   * non-built-in name.
-   */
   private static validateMeta(meta: Meta | undefined): void {
     if (!meta) return
 
@@ -289,7 +283,7 @@ export class Policy<
     }
   }
 
-  /** Returns a copy of the definition this Policy was constructed from, including its own `version`. */
+  /** Returns a copy of the definition this Policy was constructed from; mutating it doesn't affect the Policy. */
   def(): PolicyDefinition {
     return cloneDefinition(this.definition)
   }

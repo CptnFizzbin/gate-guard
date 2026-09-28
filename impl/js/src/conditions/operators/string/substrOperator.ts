@@ -8,7 +8,6 @@ import { createOperator } from "../operator.ts"
 const compiledPatterns = new Map<string, RegExp>()
 const MAX_COMPILED_PATTERNS = 1000
 
-/** @throws PolicyTypeMismatchError for a `^` anywhere but first, or a `$` anywhere but last. */
 function compilePattern(pattern: string): RegExp {
   let regexPattern = ""
   for (let i: number = 0; i < pattern.length; i++) {

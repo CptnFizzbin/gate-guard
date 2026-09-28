@@ -32,9 +32,9 @@ export type InferCondition<TOperator extends AnyOperator> =
     : never
 
 /**
- * @throws PolicyArgumentError unless `name` is a `$`-prefixed string - a key
- *   without the prefix is always read as a field name, so such an operator
- *   could never be reached.
+ * @throws PolicyArgumentError unless `name` is `$` followed by at least one
+ *   character - a key without the prefix is always read as a field name, so
+ *   such an operator could never be reached.
  */
 export function assertOperatorName(name: unknown): asserts name is `$${string}` {
   if (typeof name !== "string" || !name.startsWith("$") || name.length < 2) {
@@ -51,7 +51,7 @@ export function assertOperatorName(name: unknown): asserts name is `$${string}` 
  * const HasRole = createOperator("$hasRole", (subject: { roles: string[] }, role: string) => subject.roles.includes(role))
  * ```
  *
- * @throws PolicyArgumentError if `name` isn't `$`-prefixed.
+ * @throws PolicyArgumentError if `name` isn't `$` followed by at least one character.
  */
 export function createOperator<TSubject, TValue = JsonValue>(
   name: Operator<TSubject, TValue>["name"],
