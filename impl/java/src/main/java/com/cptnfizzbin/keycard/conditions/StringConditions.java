@@ -20,11 +20,6 @@ public final class StringConditions {
         return subject.equals(expected);
     }
 
-    /**
-     * Compares numbers by value, regardless of boxed type. Integral values
-     * compare exactly (no precision loss above 2^53); anything involving a
-     * float/double uses IEEE-754 {@code ==}.
-     */
     private static boolean numericEq(Number a, Number b) {
         // Not Number.equals: Integer.equals(Long) is always false, but a claims
         // field declared long must equal the Integer a JSON/YAML parser produces
@@ -44,7 +39,6 @@ public final class StringConditions {
         return n instanceof BigDecimal bd ? bd : new BigDecimal(n.toString());
     }
 
-    /** {@code $ne}: the exact negation of {@link #eq}. */
     public static boolean ne(Object subject, Object expected) {
         return !eq(subject, expected);
     }

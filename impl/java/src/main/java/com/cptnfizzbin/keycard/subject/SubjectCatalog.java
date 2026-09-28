@@ -34,9 +34,9 @@ public final class SubjectCatalog extends LinkedHashMap<String, Subject<?, ?>> {
     }
 
     /**
-     * Registers {@code subject} under its own name and returns {@code
-     * subject} itself - the single-arg counterpart of {@link #set(String, Subject)}
-     * for a non-dynamic Subject that already carries its own name.
+     * Registers {@code subject} under its own name and returns it.
+     *
+     * @throws PolicyArgumentException if {@code subject} is dynamic
      */
     public <S extends Subject<?, ?>> S set(S subject) {
         if (subject.dynamic())

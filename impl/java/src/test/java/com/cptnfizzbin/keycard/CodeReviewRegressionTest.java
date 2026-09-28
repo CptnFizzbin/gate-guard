@@ -18,19 +18,15 @@ import java.util.Set;
 
 import static org.junit.Assert.*;
 
-/**
- * Regression coverage for Policy isolation from later mutation, structural
- * validation, numeric equality across boxed types, and method-reference field
- * names.
- */
 public class CodeReviewRegressionTest {
     public record Doc(long ownerId, Set<String> tags, String isbn) {}
 
     private static final Action READ = new Action("read");
     private static final Action DELETE = new Action("delete");
-    // --- a built Policy is isolated from later mutation ---
 
     private static final Subject<Doc, ?> DOC = new Subject<>("doc");
+
+    // --- a built Policy is isolated from later mutation ---
 
     @Test
     public void builderCallsAfterBuildDoNotChangeAnAlreadyBuiltPolicy() {
@@ -51,9 +47,10 @@ public class CodeReviewRegressionTest {
         def.rules().add(new PolicyDefinition.Rule("allow", "delete", "doc"));
 
         assertFalse(policy.can(DELETE, DOC));
-    // --- structural validation isn't gated by emitMeta ---
 
     }
+
+    // --- structural validation isn't gated by emitMeta ---
 
     @Test
     public void malformedEffectIsRejectedEvenWithEmitMetaOff() {
@@ -69,9 +66,10 @@ public class CodeReviewRegressionTest {
             .rules(List.of(new PolicyDefinition.Rule("allow", null, "doc")));
 
         assertThrows(PolicyLoadException.class, () -> new Policy(def, new KeycardConfig().emitMeta(false)));
-    // --- $eq/$in/$has use value equality across boxed numeric types ---
 
     }
+
+    // --- $eq/$in/$has use value equality across boxed numeric types ---
 
     @Test
     public void integerConditionMatchesLongField() {
@@ -100,9 +98,10 @@ public class CodeReviewRegressionTest {
 
         assertTrue(policy.can(READ, DOC.wrap(new Doc(1, Set.of("public"), "x"))));
         assertTrue(new ConditionResolver().evaluate(3, Map.of("$in", Set.of(1, 2, 3))));
-    // --- field names derived from method references ---
 
     }
+
+    // --- field names derived from method references ---
 
     @Test
     public void accessorStartingWithIsOrGetIsNotMangled() {

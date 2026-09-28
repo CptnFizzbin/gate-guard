@@ -3,7 +3,6 @@ package com.cptnfizzbin.keycard.conditions;
 import java.util.Map;
 import java.util.Set;
 
-/** Field access for both bare-key field conditions and the {@code $field} operator. */
 final class FieldAccess {
     private FieldAccess() {
     }
@@ -25,10 +24,9 @@ final class FieldAccess {
             return false;
         }
 
-        // Every missing-field path returns isBareNe(condition): the spec requires
-        // $ne to be the exact negation of $eq, and $eq on a missing field is
-        // false, so a bare $ne on a missing field must be true; every other
-        // condition on a missing field is false.
+        // The spec requires $ne to be the exact negation of $eq, and $eq on a
+        // missing field is false, so a bare $ne on a missing field must be true;
+        // every other condition on a missing field is false.
         if (subject instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) subject;
             if (!map.containsKey(fieldName)) return isBareNe(condition);
@@ -47,12 +45,7 @@ final class FieldAccess {
         }
     }
 
-    /**
-     * Returns {@code true} when {@code condition} is exactly
-     * {@code { $ne: ... }} - the only field condition a missing field
-     * satisfies. A {@code $ne} that is one key among several, or nested
-     * deeper, doesn't count.
-     */
+    /** Returns {@code true} when {@code condition} is exactly {@code { $ne: ... }}; a {@code $ne} alongside other keys, or nested deeper, doesn't count. */
     private static boolean isBareNe(Object condition) {
         // TODO: decide whether { $not: { $eq: x } } on a missing field should
         // also be true, since $not carries the same "exact negation" contract as $ne.

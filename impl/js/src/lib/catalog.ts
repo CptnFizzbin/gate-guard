@@ -4,7 +4,6 @@ import { PolicyArgumentError } from "../errors/index.ts"
 export interface CatalogResolution {
   /** Raw name (a dynamic Action/Subject's random id, or a named entry's own name) -> catalog key. */
   reverseMap: Map<string, string>
-  /** Every resolved name: each entry's catalog key. */
   names: string[]
 }
 
@@ -44,7 +43,6 @@ export function buildCatalog<T extends { name: string }>(
   return { reverseMap, names }
 }
 
-/** Resolves `rawName` (an Action/Subject's `.name`, dynamic or not) to its catalog key, or returns it unchanged when it isn't a registered catalog entry. */
 export function resolveName(reverseMap: Map<string, string>, rawName: string): string {
   return reverseMap.get(rawName) ?? rawName
 }

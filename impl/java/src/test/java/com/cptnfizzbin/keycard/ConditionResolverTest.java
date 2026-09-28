@@ -89,12 +89,6 @@ public class ConditionResolverTest {
         assertFalse(resolver.evaluate(Collections.singletonMap("owner", null), Map.of("owner", Condition.op("$ne", null))));
     }
 
-    /**
-     * A custom operator receives an {@link com.cptnfizzbin.keycard.conditions.OperatorContext}
-     * that lets it recurse into the condition language exactly like the
-     * built-in $and/$or/$not do - here, a custom "$every" operator
-     * (re-implementing $and via resolveSubcondition) over a fixed subject.
-     */
     @Test
     public void customOperatorCanRecurseViaOperatorContext() {
         val operators = new OperatorCatalog()

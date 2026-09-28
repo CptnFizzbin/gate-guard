@@ -45,7 +45,7 @@ export default defineConfig([
       },
     },
     rules: {
-      ...{ // eslint-plugin-check-file rules
+      ...{
         "check-file/filename-naming-convention": [
           "error",
           {
@@ -57,7 +57,7 @@ export default defineConfig([
         ],
       },
 
-      ...{ // builtin eslint rules
+      ...{
         "default-case": "error",
         "default-case-last": "error",
         "eqeqeq": ["error", "always"],
@@ -81,7 +81,7 @@ export default defineConfig([
         "unicode-bom": ["error", "never"],
       },
 
-      ...{ // @typescript-eslint rules
+      ...{
         "@typescript-eslint/consistent-type-exports": "error",
         "@typescript-eslint/consistent-type-imports": "error",
         "@typescript-eslint/no-empty-object-type": "off",
@@ -98,12 +98,14 @@ export default defineConfig([
           requireDefaultForNonUnion: true,
         }],
 
-        // conflicts with TypeScript's function overloads
-        "no-redeclare": "off",
+        "no-redeclare": "off", // conflicts with TypeScript's function overloads
+        // Overrides "error" above: switch-exhaustiveness-check already requires a
+        // default for non-union switches, and default-case would also demand one
+        // on switches that exhaustively cover a union.
         "default-case": "off",
       },
 
-      ...{ // eslint-plugin-import-x rules
+      ...{
         "import-x/consistent-type-specifier-style": ["error", "prefer-top-level"],
         "import-x/default": "off",
         "import-x/extensions": ["error", "ignorePackages", { fix: true }],
@@ -138,13 +140,13 @@ export default defineConfig([
         ],
       },
 
-      ...{ // eslint-plugin-react rules
+      ...{
         "react/no-children-prop": "off",
         "react/no-unescaped-entities": "off",
         "react/react-in-jsx-scope": "off",
       },
 
-      ...{ // @stylistic rules
+      ...{
         "@stylistic/jsx-one-expression-per-line": "off",
         "@stylistic/operator-linebreak": [
           "error", "before", {

@@ -42,10 +42,8 @@ describe("SubjectFieldMapper: attached via createSubject", () => {
   })
 
   test("a field condition cannot narrow twice even with a mapper in play", () => {
-    // The spec permits only one level of field narrowing -
-    // a fieldMapper on Post doesn't change that: `author` is a field of
-    // Post, but `author`'s own Condition can't itself be another field
-    // condition (`name`), mapped or not.
+    // The mapper doesn't lift the one-level limit: { author: { name } } is
+    // still a nested field condition.
     const post = createSubject<Post>("Post", {
       authorName: (instance) => instance.author.name,
     })
@@ -59,9 +57,6 @@ describe("SubjectFieldMapper: attached via createSubject", () => {
   })
 
   test("a mapped field's value can still use non-field operators", () => {
-    // Once resolved through the mapper, `authorName`'s own value (a plain
-    // string here) can still be checked with any non-field operator -
-    // narrowing is what's restricted to one level, not operator use.
     const post = createSubject<Post>("Post", {
       authorName: (instance) => instance.author.name,
     })

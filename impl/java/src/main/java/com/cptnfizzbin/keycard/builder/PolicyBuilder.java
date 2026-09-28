@@ -97,10 +97,6 @@ public class PolicyBuilder {
             .meta(config.emitMeta() ? buildMeta() : null);
     }
 
-    /**
-     * Returns the {@code meta} block: the actions, subjects, and custom
-     * operators used or declared so far, plus the configured wildcard tokens.
-     */
     private PolicyDefinition.Meta buildMeta() {
         Set<String> actions = new LinkedHashSet<>(actionsUsed);
         actions.addAll(actionResolution.names());

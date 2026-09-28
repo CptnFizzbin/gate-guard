@@ -12,7 +12,6 @@ public sealed interface WildcardToken {
     /** The wildcard mechanism is disabled for this position - no string, including {@code "_ANY_"}, has special meaning. */
     record Disabled() implements WildcardToken {}
 
-    /** An explicit wildcard token string. */
     record Named(String token) implements WildcardToken {}
 
     Disabled DISABLED = new Disabled();

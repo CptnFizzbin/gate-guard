@@ -3,20 +3,11 @@ import type { SubjectFieldMapper } from "../../../subject/subjectFieldMapper.ts"
 import type { AnyCondition, Condition } from "../../condition.ts"
 import type { OperatorContext } from "../operator.ts"
 
-/**
- * Returns `true` when `subject` is a non-null object carrying `fieldName`.
- * A missing field or non-object subject counts as absence, not a type
- * mismatch, so this never throws.
- */
 export function hasField(subject: unknown, fieldName: string): subject is Record<string, unknown> {
   return subject !== null && typeof subject === "object" && fieldName in subject
 }
 
-/**
- * Returns `true` when `condition` is exactly `{ $ne: ... }` - the only field
- * condition a missing field satisfies. A `$ne` that is one key among several,
- * or nested deeper, doesn't count.
- */
+/** Returns `true` when `condition` is exactly `{ $ne: ... }`; a `$ne` alongside other keys, or nested deeper, doesn't count. */
 export function isBareNe<TSubject>(condition: Condition<TSubject>): boolean {
   // TODO: decide whether `{ $not: { $eq: x } }` on a missing field should also
   // be true, since $not carries the same "exact negation" contract as $ne.
@@ -46,7 +37,7 @@ function hasFieldMapper(ctx: OperatorContext): ctx is FieldMapperContext {
  * Evaluates `condition` against the `fieldName` field of `subject`, as both a
  * bare-key field condition and `$field` do. The context's SubjectFieldMapper,
  * if any, is tried first; a field it doesn't define uses ordinary property
- * access. A missing field satisfies only a bare `$ne` (see {@link isBareNe}).
+ * access.
  *
  * @throws PolicyTypeMismatchError if `ctx` doesn't allow field narrowing,
  *   i.e. a field condition is nested inside another field condition

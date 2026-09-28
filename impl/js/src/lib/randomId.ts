@@ -1,4 +1,3 @@
-/** Returns a random id for a dynamic (unnamed) Action/Subject - see `Action.__dynamic`. */
 export function randomId(): string {
   // Reached via globalThis, not `crypto` or `node:crypto`: this package runs
   // in browsers and Node, and with `lib: ["ES2025"]` (no "DOM") neither

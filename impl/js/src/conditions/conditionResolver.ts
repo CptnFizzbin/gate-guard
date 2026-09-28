@@ -9,7 +9,6 @@ import { DefaultOperators } from "./operators/defaultOperators.ts"
 import type { FieldMapperContext } from "./operators/field/fieldAccess.ts"
 import { checkField } from "./operators/field/fieldAccess.ts"
 
-/** Names of every built-in operator a {@link ConditionResolver} registers by default. */
 export const BUILTIN_OPERATOR_NAMES: ReadonlySet<string> = new Set(DefaultOperators.map((op) => op.name))
 
 /**
@@ -64,11 +63,6 @@ export class ConditionResolver {
     return this.evaluateInternal(subject, condition, true, fieldMapper as SubjectFieldMapper<unknown> | undefined)
   }
 
-  /**
-   * @param canNarrowField whether a field condition (bare-key or `$field`) may
-   *   still narrow at this point in the tree - `false` once one field access
-   *   has narrowed, since the spec allows only one level of field access
-   */
   private evaluateInternal<TSubject>(
     subject: TSubject,
     condition: Condition<TSubject>,
@@ -113,7 +107,6 @@ export class ConditionResolver {
     return operator.resolve(subject, value, this.contextFor(canNarrowField, fieldMapper))
   }
 
-  /** Returns the {@link OperatorContext} for the given narrowing state and field mapper. */
   private contextFor(canNarrowField: boolean, fieldMapper?: SubjectFieldMapper<unknown>): OperatorContext {
     if (!canNarrowField) return this.nestedContext
     // A fieldMapper only lives for one top-level evaluate() call, so its

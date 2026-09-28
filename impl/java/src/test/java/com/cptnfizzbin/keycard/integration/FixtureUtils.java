@@ -16,22 +16,11 @@ import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-/**
- * Format-independent helpers for fixture-driven integration suites:
- * discovering {@code *.yaml} files, parsing YAML documents, the common
- * {@link TestCase} shape, resolving a case against a {@link Policy}, and
- * filtering fixtures by the SemVer {@code version} they declare. Not a test
- * class itself.
- */
+/** Format-independent helpers for fixture-driven integration suites. */
 final class FixtureUtils {
     private FixtureUtils() {
     }
 
-    /**
-     * Shared Jackson YAML mapper that binds fixture documents to typed Java
-     * types, tolerating unknown fields (e.g. an informational
-     * {@code description:}).
-     */
     static final YAMLMapper YAML = YAMLMapper.builder()
         .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
         .build();
@@ -41,7 +30,6 @@ final class FixtureUtils {
                            boolean expected) {
     }
 
-    /** Returns the {@code *.yaml} files anywhere under {@code dir} that satisfy {@code filter}, sorted by path. */
     static List<Path> discoverYamlFiles(Path dir, Predicate<Path> filter) throws IOException {
         try (var stream = Files.walk(dir)) {
             return stream
@@ -53,18 +41,12 @@ final class FixtureUtils {
         }
     }
 
-    /** Returns every {@code ---}-separated YAML document in {@code yamlFile}, bound to {@code type}. */
     static <T> List<T> loadYamlDocuments(Path yamlFile, Class<T> type) throws IOException {
         try (var parser = YAML.createParser(yamlFile.toFile())) {
             return YAML.readValues(parser, type).readAll();
         }
     }
 
-    /**
-     * Returns {@code policy}'s verdict for {@code testCase}, checked against a
-     * bare Subject when the case has no {@code subjectData}, otherwise one
-     * wrapping it.
-     */
     static boolean resolve(Policy policy, TestCase testCase) {
         Action action = new Action(testCase.action());
         Subject<Map<String, Object>, ?> subject = new Subject<>(testCase.subject());
@@ -74,11 +56,6 @@ final class FixtureUtils {
         return policy.can(action, subject);
     }
 
-    /**
-     * Returns {@code true} when a fixture declaring {@code fixtureVersion} is
-     * compatible with {@code maxSupportedVersion}: the same MAJOR, and a MINOR
-     * no higher. PATCH never affects compatibility.
-     */
     static boolean isCompatible(String fixtureVersion, String maxSupportedVersion) {
         Semver fixture = Objects.requireNonNull(Semver.coerce(fixtureVersion));
         Semver max = Objects.requireNonNull(Semver.coerce(maxSupportedVersion));

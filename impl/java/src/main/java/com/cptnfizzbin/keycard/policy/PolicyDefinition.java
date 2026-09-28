@@ -46,6 +46,11 @@ public final class PolicyDefinition {
     @JsonProperty("rules")
     private List<Rule> rules = new ArrayList<>();
 
+    /**
+     * Returns an immutable snapshot of the rules. Lombok's fluent
+     * {@code rules()} returns the live, mutable list; {@code Policy} relies on
+     * this snapshot so later edits to the definition can't bypass validation.
+     */
     public List<Rule> getRules() {
         return List.copyOf(rules);
     }

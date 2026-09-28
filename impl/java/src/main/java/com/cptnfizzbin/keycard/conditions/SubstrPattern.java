@@ -2,12 +2,7 @@ package com.cptnfizzbin.keycard.conditions;
 
 import java.util.regex.Pattern;
 
-/**
- * A parsed {@code $substr} pattern: {@code *} matches any run of characters,
- * a leading {@code ^} or trailing {@code $} anchors the match, and a
- * backslash escapes the next character (a trailing backslash is ignored). An
- * unanchored pattern matches anywhere in the subject.
- */
+/** A parsed {@code $substr} pattern (syntax: see {@link Condition#substr}); a trailing backslash is ignored. */
 final class SubstrPattern {
     private final Pattern compiled;
 

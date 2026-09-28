@@ -28,7 +28,6 @@ const config: KeycardConfig = {
   subjects: Subjects,
 }
 
-/** Returns `user`'s policy: anyone may create and read articles, and owners may update their own. */
 function createUserPolicy(user: { id: number }): Policy<AppActions, AppSubjects> {
   return new PolicyBuilder<AppActions, AppSubjects>(config)
     .allow(Actions.create, Subjects.article)
@@ -63,7 +62,3 @@ const def = JSON.parse(json)
 const restoredPolicy = new Policy<AppActions, AppSubjects>(def, config)
 
 logger.info(`Restored policy agrees: ${restoredPolicy.can(Actions.update, ownArticle)}`)
-
-// Type safety: these would be caught at compile time
-// policy.can(Actions.create, "InvalidSubject"); // ❌ Type error
-// policy.can("InvalidAction", Subjects.article); // ❌ Type error

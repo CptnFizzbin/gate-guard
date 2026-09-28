@@ -22,10 +22,10 @@ import static org.junit.Assert.*;
  */
 public class DynamicCatalogTest {
 
+    // --- new Action() (no-arg) ---
+
     @Test
     public void actionCreateWithANameBehavesAsBeforeNotDynamic() {
-    // --- Action.create()/new Action() (no-arg) ---
-
         Action action = new Action("Read");
 
         assertEquals("Read", action.name());
@@ -48,10 +48,10 @@ public class DynamicCatalogTest {
         assertNotEquals(a.name(), b.name());
     }
 
+    // --- new Subject<>() (no-arg) ---
+
     @Test
     public void subjectCreateWithANameBehavesAsBeforeNotDynamic() {
-    // --- Subject.create()/new Subject<>() (no-arg) ---
-
         Subject<?, ?> subject = new Subject<>("Article");
 
         assertEquals("Article", subject.name());
@@ -84,10 +84,10 @@ public class DynamicCatalogTest {
         assertEquals(1, wrapped.claims().orElseThrow().intValue());
     }
 
-    @Test
-    public void aKeyedCatalogsKeyNotTheDynamicDefsRandomIdIsWhatGetsSerialized() {
     // --- PolicyBuilder: dynamic (no-name) Action/Subject resolved via a KeycardConfig catalog ---
 
+    @Test
+    public void aKeyedCatalogsKeyNotTheDynamicDefsRandomIdIsWhatGetsSerialized() {
         Action create = new Action();
         Subject<?, ?> article = new Subject<>();
 
@@ -105,7 +105,6 @@ public class DynamicCatalogTest {
 
     @Test
     public void aPlainListConfigStillWorksExactlyAsBeforeNoCatalogNoResolution() {
-
         KeycardConfig config = new KeycardConfig();
         config.actions().add(new Action("Delete"));
         config.subjects().add(new Subject<>("Comment"));
@@ -150,8 +149,6 @@ public class DynamicCatalogTest {
 
     @Test
     public void anExplicitlyNamedActionSubjectInAKeyedCatalogIsStillResolvedToItsCatalogKey() {
-        // "if using a catalog, defining the name is optional" - a catalog
-        // key wins for any entry, named or not.
         Action create = new Action("Create");
         Subject<?, ?> article = new Subject<>("Article");
 
@@ -165,10 +162,10 @@ public class DynamicCatalogTest {
         assertEquals("post", def.getRules().get(0).subjectName());
     }
 
-    @Test
-    public void aDynamicDefResolvesViaItsCatalogKeyToMatchARuleWrittenAgainstThatKey() {
     // --- Policy: dynamic (no-name) Action/Subject resolved via a KeycardConfig catalog ---
 
+    @Test
+    public void aDynamicDefResolvesViaItsCatalogKeyToMatchARuleWrittenAgainstThatKey() {
         Action create = new Action();
         Subject<?, ?> article = new Subject<>();
 

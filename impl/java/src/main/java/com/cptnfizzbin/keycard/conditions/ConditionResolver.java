@@ -59,10 +59,6 @@ public final class ConditionResolver {
         return true;
     }
 
-    /**
-     * Evaluates one condition key: a {@code $}-prefixed key names an operator
-     * (an unregistered one never matches), and any other key names a field.
-     */
     private boolean evaluateKey(Object subject, String key, Object value, boolean canNarrowField) {
         OperatorContext ctx = contextFor(canNarrowField);
 

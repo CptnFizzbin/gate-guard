@@ -33,9 +33,9 @@ public final class ActionCatalog extends LinkedHashMap<String, Action> {
     }
 
     /**
-     * Registers {@code action} under its own name and returns {@code
-     * action} itself - the single-arg counterpart of {@link #set(String, Action)}
-     * for a non-dynamic Action that already carries its own name.
+     * Registers {@code action} under its own name and returns it.
+     *
+     * @throws PolicyArgumentException if {@code action} is dynamic
      */
     public Action set(Action action) {
         if (action.dynamic())

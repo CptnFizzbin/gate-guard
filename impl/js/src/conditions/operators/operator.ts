@@ -27,6 +27,15 @@ export type InferCondition<TOperator extends AnyOperator> =
     ? { [key in TOperator["name"]]: TValue }
     : never
 
+/**
+ * Creates a custom operator named `name`. If `resolver` throws a
+ * `PolicyTypeMismatchError`, the operator logs a warning and evaluates to
+ * `false`; any other error propagates.
+ *
+ * ```ts
+ * const HasRole = createOperator("$hasRole", (subject: { roles: string[] }, role: string) => subject.roles.includes(role))
+ * ```
+ */
 export function createOperator<TSubject, TValue = JsonValue>(
   name: Operator<TSubject, TValue>["name"],
   resolver: Operator<TSubject, TValue>["resolve"],
@@ -71,7 +80,6 @@ export type OperatorResolver<TSubject = unknown, TValue = JsonValue> = (
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type OperatorCatalog<TSubject = any, TValue = JsonValue> = Record<`$${string}`, OperatorResolver<TSubject, TValue>>
 
-/** Normalizes `KeycardConfig.operators` (an `AnyOperator[]`, an `OperatorCatalog`, or neither) into the `AnyOperator[]` form `ConditionResolver` accepts. */
 export function normalizeOperators<TOperators extends AnyOperator>(
   operators: TOperators[] | OperatorCatalog | undefined,
 ): AnyOperator[] {

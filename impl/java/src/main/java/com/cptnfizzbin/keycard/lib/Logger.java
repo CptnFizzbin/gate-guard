@@ -1,6 +1,7 @@
 package com.cptnfizzbin.keycard.lib;
 
-/** A sink for KeyCard's non-fatal diagnostics. */
+// TODO: delete this interface or switch KeycardConfig.logger to it - KeycardConfig.logger
+// is a java.lang.System.Logger, so nothing uses this type
 public interface Logger {
     default void warn(String message) {
         this.log(System.Logger.Level.WARNING, message);

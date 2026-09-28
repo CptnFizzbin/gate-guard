@@ -6,7 +6,6 @@ package com.cptnfizzbin.keycard.conditions;
  * each receives an {@link OperatorContext} for evaluating nested conditions.
  */
 public interface Operator {
-    /** The {@code $}-prefixed name this operator is registered under (e.g. {@code "$eq"}, {@code "$hasRole"}). */
     String name();
 
     /**
@@ -17,7 +16,6 @@ public interface Operator {
      */
     boolean resolve(Object subject, Object value, OperatorContext ctx);
 
-    /** Builds an {@code Operator} from a name and a {@link Resolver}. */
     static Operator of(String name, Resolver resolver) {
         return new Operator() {
             @Override

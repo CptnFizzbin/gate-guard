@@ -96,8 +96,6 @@ public class PolicyValidationTest {
             ));
     }
 
-    // --- operator registry collisions ---
-
     @Test
     public void throwsPolicyLoadExceptionWhenACustomOperatorCollidesWithABuiltin() {
         assertThrows(PolicyLoadException.class, () ->
@@ -114,17 +112,13 @@ public class PolicyValidationTest {
             )));
     }
 
-    // --- meta.operators promotes "cataloged but never registered" to a construction-time throw ---
     // Spec: https://keycard.cptnfizzbin.dev/spec/v0#metaoperators
 
     @Test
     public void throwsPolicyLoadExceptionWhenMetaOperatorsDeclaresANameNothingIsRegisteredFor() {
         PolicyDefinition.Meta meta = new PolicyDefinition.Meta().operators(List.of("$hasRole"));
 
-        // Unlike the uncataloged-operator case above, this throws even though no rule references
-        // $hasRole at all - meta.operators' registration requirement is
-        // checked in full when loading a policy, not merely for names rules
-        // actually use.
+        // Throws even though no rule uses $hasRole: every meta.operators entry must be registered.
         assertThrows(PolicyLoadException.class, () ->
             new Policy(new PolicyDefinition().meta(meta)));
     }
@@ -146,8 +140,6 @@ public class PolicyValidationTest {
         ); // should not throw
     }
 
-    // --- meta.anyAction/meta.anySubject four-way dispatch ---
-
     @Test
     public void falseDisablesTheActionWildcardJustLikeNull() {
         PolicyDefinition.Meta meta = new PolicyDefinition.Meta().anyAction(false);
@@ -162,7 +154,7 @@ public class PolicyValidationTest {
         assertTrue(policy.can(new Action("_ANY_"), new Subject<>("Article")));
     }
 
-    // --- PolicyBuilder derives meta.actions/subjects/operators from usage; only the wildcard tokens are ever declared explicitly ---
+    // --- PolicyBuilder meta derivation ---
 
     @Test
     public void buildDefDerivesActionsSubjectsAndOperatorsFromWhatWasActuallyUsed() {
@@ -188,10 +180,7 @@ public class PolicyValidationTest {
             .allow(new Action("Read"), new Subject<>("Article"))
             .buildDef();
 
-        // Undeclared -> null on Meta, so Wildcards.effectiveAnyAction/
-        // effectiveAnySubject fall back to the "_ANY_" default - a
-        // PolicyBuilder() with no wildcard args MUST NOT come out as
-        // "explicitly disabled" (that's what WildcardToken.of(null) means).
+        // Undeclared (null), not Disabled - WildcardToken.Disabled would turn the wildcard off.
         assertEquals(null, def.meta().anyAction());
         assertEquals(null, def.meta().anySubject());
     }
@@ -203,8 +192,6 @@ public class PolicyValidationTest {
             .allow(new Action("Read"), new Subject<>("*"))
             .build();
 
-        // With anyAction "*", a rule naming "*" as its action matches any
-        // incoming action.
         assertTrue(policy.can(new Action("AnythingGoes"), new Subject<>("Article")));
 
         // The subject wildcard is disabled (false): a rule's literal "*"
@@ -273,12 +260,8 @@ public class PolicyValidationTest {
             .allow(new Action("Read"), AnySubject)
             .build();
 
-        // With anyAction "*", a rule naming "*" as its action matches any
-        // incoming action.
         assertTrue(policy.can(new Action("AnythingGoes"), new Subject<>("Article")));
 
-        // With anySubject "*", a rule naming "*" as its subject matches any
-        // incoming subject.
         assertTrue(policy.can(new Action("Read"), new Subject<>("AnySubjectName")));
         assertTrue(policy.can(new Action("Read"), new Subject<>("*")));
     }

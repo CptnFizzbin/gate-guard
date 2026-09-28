@@ -126,12 +126,6 @@ public class PolicyTest {
         assertTrue(policy.can(delete, article));
     }
 
-    /**
-     * `allow`/`deny`/`can`/`cannot`/`require` always take a real
-     * `Action` and `Subject<?, ?>` - no bare-`String` or raw-instance
-     * overloads. A bare Subject (no `.wrap()`) is a type-only check; a
-     * wrapped one carries instance data a Conditions element can inspect.
-     */
     @Test
     public void alwaysRequiresActionAndSubject() {
         Subject<Article, ?> article = new Subject<>("Article");
@@ -154,12 +148,6 @@ public class PolicyTest {
         assertFalse(policy.can(update, article.wrap(notOwned)));
     }
 
-    /**
-     * A custom operator supplied to {@code PolicyBuilder} carries
-     * through {@code build()} into the constructed {@code Policy} - a
-     * builder-produced definition doesn't need its operators re-supplied
-     * separately at {@code new Policy(...)}.
-     */
     @Test
     public void builderSuppliedOperatorsCarryThroughToTheBuiltPolicy() {
         Subject<Article, ?> article = new Subject<>("Article");

@@ -3,12 +3,7 @@ import type { AnyOperator, OperatorCatalog } from "./conditions/operators/operat
 import type { Logger } from "./lib/logger.ts"
 import type { Subject, SubjectCatalog, SubjectFieldMapperCatalog } from "./subject/index.ts"
 
-/**
- * Optional config shared by `Policy` and `PolicyBuilder`: the actions and
- * subjects a policy is written against, its custom operators, and the
- * SubjectFieldMappers its subjects need, so one object can be handed to both.
- * Every field is independently optional.
- */
+/** Config shared by `Policy` and `PolicyBuilder`, so one object can be handed to both. */
 export interface KeycardConfig<TOperators extends AnyOperator = never> {
   // actions/subjects/anyAction/anySubject are typed against the base
   // Action/Subject rather than a builder's TActions/TSubjects: tying them to
@@ -16,21 +11,14 @@ export interface KeycardConfig<TOperators extends AnyOperator = never> {
   // narrow what allow/deny accept everywhere else on the same builder.
 
   /**
-   * Declared action vocabulary, additive to `meta.actions` -
-   * each key becomes the serialized name for its entry, which is how a
-   * `createAction()` call with no name (see {@link Action.__dynamic}) gets
-   * a real, stable name. A named entry may still be given its own key
-   * (if using a catalog, defining the name is optional) - the
-   * catalog key always wins over the entry's own name.
+   * Declared action vocabulary, additive to `meta.actions`. Each key is its
+   * entry's serialized name and always wins over the entry's own name, which
+   * is how a nameless `createAction()` gets a stable name.
    */
   actions?: ActionCatalog
   /** Declared subject vocabulary, additive to `meta.subjects` - see `actions`, symmetric for Subjects. */
   subjects?: SubjectCatalog
-  /**
-   * Custom operators to register alongside the built-ins - either an
-   * `AnyOperator[]` (built via `createOperator`) or an `OperatorCatalog`
-   * (a bare `{ $name: resolver }` map, no `createOperator` call needed).
-   */
+  /** Custom operators to register alongside the built-ins. */
   operators?: TOperators[] | OperatorCatalog
   /**
    * The action wildcard token - undeclared by default, in which case

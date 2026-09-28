@@ -16,8 +16,8 @@ that don't fit any style (or that mix them) should be rewritten or removed. The 
 
 ```ts
 // ✅ — describes the contract, no history, no internals
-/** Returns the action wildcard token in effect: `"_ANY_"` when `meta.anyAction` is absent, `DISABLED` when it is `null`. */
-export function effectiveAnyAction(meta?: Meta): string | typeof DISABLED { ... }
+/** Returns whether `action` is allowed on `subject`: the last-declared matching rule decides, and no match means deny. */
+can(action: TActions, subject: TSubjects): boolean { ... }
 
 // ❌ — refers to an old version of the code
 /** Checks the rule. Replaces the old first-match evaluation from before the spec rework. */
@@ -79,8 +79,8 @@ version: "19.0",
 
 - `// Arrange` / `// Act` / `// Assert` section labels in tests — they're structural section labels, not
   documentation or explanation.
-- Section labels that group related declarations — test groups (`// --- operator registry collisions ---`), export
-  groups in an index file (`// Policy`), or rule groups in a config (`...{ // @typescript-eslint rules`). Keep them
-  short and descriptive; like Arrange/Act/Assert, they're structure rather than documentation or explanation.
+- Section labels that group related tests (`// --- KeycardConfig.emitMeta ---`) — like Arrange/Act/Assert, they're
+  structure rather than documentation or explanation. Keep them short, put them directly above the first member of
+  their group, and only add one when the group isn't already obvious from the names below it.
 - Tool directives such as `// eslint-disable-next-line`, `// @ts-expect-error`, or `// CHECKSTYLE:OFF` — they
   instruct tooling, not readers.

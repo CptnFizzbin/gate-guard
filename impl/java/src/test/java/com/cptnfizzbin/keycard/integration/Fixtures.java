@@ -14,8 +14,7 @@ import java.util.Map;
 
 /**
  * Loads the shared, spec-derived conformance fixtures under test/fixtures
- * (see test/fixtures/v0/README.md) that every implementation MUST pass. Not a test
- * class itself - see {@link ConformanceFixtureTest}.
+ * (see test/fixtures/v0/README.md) that every implementation MUST pass.
  */
 final class Fixtures {
     private Fixtures() {
@@ -23,7 +22,6 @@ final class Fixtures {
 
     static final Path FIXTURES_DIR = Paths.get("../../test/fixtures");
 
-    /** Returns every {@code *.yaml} fixture file under test/fixtures, sorted by path. */
     static List<Path> discoverFixtureFiles() throws IOException {
         return FixtureUtils.discoverYamlFiles(FIXTURES_DIR, p -> true);
     }
@@ -44,7 +42,6 @@ final class Fixtures {
             }));
         }
         if ("policy-05-advanced.yaml".equals(fixtureFileName)) {
-            // A custom operator checking whether a field's string value starts with an uppercase letter.
             return List.of(Operator.of("$startsWithUpper", (subject, value, ctx) -> {
                 if (!(subject instanceof String) || !(value instanceof Boolean) || ((String) subject).isEmpty()) {
                     return false;

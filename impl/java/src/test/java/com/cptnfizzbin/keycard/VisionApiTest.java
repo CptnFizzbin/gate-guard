@@ -19,15 +19,9 @@ import java.util.List;
 
 import static org.junit.Assert.*;
 
-/**
- * Covers the API shown in website/docs-java/vision-quickstart.md and
- * vision-real-backend.md:
- * {@code ActionCatalog}/{@code SubjectCatalog#set}, the self-bounded
- * {@code Subject<T, TSelf>} subclassing hook, {@code Condition.where}/the
- * getter-scoped {@code Condition.op}, {@link ConditionOperator}, and
- * {@code KeycardConfig#emitMeta}.
- */
+/** Covers the API shown in website/docs-java/vision-quickstart.md and vision-real-backend.md. */
 public class VisionApiTest {
+
     // --- ActionCatalog.set / SubjectCatalog.set ---
 
     @Test
@@ -58,8 +52,6 @@ public class VisionApiTest {
         SubjectCatalog catalog = new SubjectCatalog();
         ArticleSubject article = catalog.set("article", new ArticleSubject());
 
-        // set() returns ArticleSubject itself, not a plain Subject<?, ?> -
-        // no cast needed to keep using it as an ArticleSubject.
         assertSame(article, catalog.get("article"));
         ArticleSubject wrapped = article.from("owner-1");
         assertEquals("owner-1", wrapped.claims().orElseThrow());

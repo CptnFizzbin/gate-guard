@@ -13,15 +13,9 @@ import { DISABLED, effectiveAnyAction, effectiveAnySubject } from "../policy/wil
 import type { Subject } from "../subject/index.ts"
 import { KEYCARD_POLICY_VERSION } from "../version.ts"
 
-/** The policy spec version stamped onto every `buildDef()` output. */
 export const BUILDER_VERSION = KEYCARD_POLICY_VERSION
 
-/**
- * Returns the serialized wildcard token for `value`: `null` disables the
- * wildcard and `undefined` selects the default token.
- *
- * @param reverseMap resolves a dynamic Action/Subject to its catalog key
- */
+/** Returns the serialized wildcard token for `value`: `null` disables the wildcard; `undefined` selects the default. */
 function wildcardNameOf(value: Action | Subject | string | undefined | null, reverseMap: Map<string, string>): string | null {
   if (value === null) return null
   if (typeof value === "undefined") return DEFAULT_WILDCARD
@@ -56,14 +50,7 @@ export class PolicyBuilder<
   private readonly configSubjectNames: string[]
 
   /**
-   * @param config optional config shared with `Policy`: `actions`/`subjects`
-   *   are added to `meta.actions`/`meta.subjects` alongside whatever
-   *   `allow`/`deny` used, and resolve a dynamic (unnamed) Action/Subject to
-   *   its catalog key; `anyAction`/`anySubject` declare the wildcard tokens;
-   *   `operators` registers custom operators; `mapper` is passed through to
-   *   the built `Policy`; `emitMeta` (default `true`) enables catalog
-   *   validation and the diagnostic `meta` fields in {@link buildDef}'s
-   *   output - see `KeycardConfig`.
+   * @param config shared with `Policy` - see `KeycardConfig`
    * @throws PolicyArgumentError if `emitMeta` is true and one Action/Subject is
    *   registered under two catalog keys
    */
@@ -121,6 +108,13 @@ export class PolicyBuilder<
     return new Policy(this.buildDef(), this.config)
   }
 
+  /**
+   * Returns the `PolicyDefinition` built so far.
+   *
+   * @param options.includeMeta when `false`, omits the whole `meta` block -
+   *   including a non-default `anyAction`/`anySubject`, so the definition then
+   *   evaluates with the default `"_ANY_"` wildcards
+   */
   buildDef(options: { includeMeta?: boolean } = {}): PolicyDefinition {
     const def: PolicyDefinition = {
       version: BUILDER_VERSION,
@@ -139,11 +133,6 @@ export class PolicyBuilder<
     return def
   }
 
-  /**
-   * Returns the `meta` block: any non-default `anyAction`/`anySubject`, plus
-   * (when `emitMeta` is true) the `actions`/`subjects`/`operators` used or
-   * declared so far.
-   */
   private buildMeta(): Meta {
     const meta: Meta = {}
     if (this.anyAction !== DEFAULT_WILDCARD) meta.anyAction = this.anyAction

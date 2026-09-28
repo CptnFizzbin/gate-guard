@@ -57,8 +57,6 @@ export const SubstrOperator = createOperator("$substr", (subject, pattern) => {
     }
   }
 
-  // The "s" flag makes "." match newlines too, so a wildcard is truly
-  // "any character", per the requirement that lazy/greedy wildcards be
-  // match-equivalent (both just need one gap-filling run of characters).
+  // "s" so * also spans newlines - a wildcard means any character.
   return !!(new RegExp(regexPattern, "s").exec(subjectStr))
 })

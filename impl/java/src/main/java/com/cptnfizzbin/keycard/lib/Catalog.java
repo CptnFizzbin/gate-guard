@@ -62,7 +62,6 @@ public final class Catalog {
         return new Resolution(reverseMap, names);
     }
 
-    /** Resolves {@code rawName} (an Action/Subject's own name, dynamic or not) to its catalog key, or returns it unchanged when it isn't a registered catalog entry. */
     public static String resolveName(Map<String, String> reverseMap, String rawName) {
         String resolved = reverseMap.get(rawName);
         return resolved != null ? resolved : rawName;

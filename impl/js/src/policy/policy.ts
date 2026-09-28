@@ -16,7 +16,6 @@ import type { Subject } from "../subject/index.ts"
 import type { SubjectFieldMapper } from "../subject/subjectFieldMapper.ts"
 import { KEYCARD_POLICY_SUPPORTED_VERSIONS } from "../version.ts"
 
-/** Adds to `out` every custom (non-built-in) operator name used anywhere in `condition`. */
 function collectCustomOperators(condition: AnyCondition | undefined, out: Set<string>): void {
   if (condition === undefined || condition === null || typeof condition !== "object") return
 
@@ -50,14 +49,7 @@ export class Policy<
   private readonly warnedDynamicIds = new Set<string>()
 
   /**
-   * @param definition the parsed policy to enforce
-   * @param config optional config shared with `PolicyBuilder`: `actions`/`subjects`
-   *   widen the `meta.actions`/`meta.subjects` catalogs beyond what
-   *   `definition.meta` declares, and resolve a dynamic (unnamed)
-   *   Action/Subject to its catalog key; `operators` registers custom
-   *   operators; `mapper` supplies the field mapper for a `Subject` passed
-   *   to {@link can} that doesn't carry its own; `emitMeta` (default `true`)
-   *   enables catalog and operator coverage validation - see `KeycardConfig`.
+   * @param config shared with `PolicyBuilder` - see `KeycardConfig`
    * @throws PolicyVersionException if `definition.version` is not supported
    * @throws PolicyLoadException if a rule is malformed or not covered by the
    *   declared catalogs, a `meta.operators` entry has no registered operator,
@@ -85,10 +77,8 @@ export class Policy<
   }
 
   /**
-   * Builds a Policy from an already-parsed PolicyDefinition. KeyCard itself
-   * never reads or writes policy.yaml text - an application (or a test, via
-   * a YAML library of its own choosing) parses the file into a plain
-   * PolicyDefinition object and hands it to KeyCard.
+   * Equivalent to `new Policy(definition, config)`. KeyCard never parses policy
+   * text; parse YAML/JSON into a `PolicyDefinition` yourself.
    */
   static from<
     TActions extends Action = Action,
@@ -126,12 +116,6 @@ export class Policy<
   }
 
   /**
-   * Throws a `PolicyLoadException` for the first rule that is malformed,
-   * wildcarded on both action and subject while carrying conditions, or (when
-   * `emitMeta` is true) not covered by `meta.actions`/`meta.subjects`/`meta.operators`.
-   *
-   * @param configActionNames action names that widen `meta.actions` beyond what `definition.meta` declares
-   * @param configSubjectNames subject names that widen `meta.subjects` beyond what `definition.meta` declares
    * @param emitMeta when false, only the catalog-coverage checks are skipped;
    *   the structural checks always run, since evaluation depends on them
    */
@@ -216,6 +200,12 @@ export class Policy<
     return this.definition
   }
 
+  /**
+   * Returns whether `action` is allowed on `subject`: the last-declared rule
+   * whose action, subject, and conditions all match decides, and no match
+   * means deny. There is no "allow AND NOT deny" veto. A bare subject (no
+   * `.wrap()`) never matches a conditional rule.
+   */
   can(action: TActions, subject: TSubjects): boolean {
     return this.checkPermission(action, subject)
   }
@@ -232,12 +222,6 @@ export class Policy<
     }
   }
 
-  /**
-   * Returns the effect of the last-declared rule whose action, subject, and
-   * (if present) conditions all match. Exactly one rule decides the outcome -
-   * there is no "allow AND NOT deny" veto - or none does and the result is
-   * default deny.
-   */
   private checkPermission(action: TActions, subject: TSubjects): boolean {
     const meta = this.definition.meta
     const anyAction = effectiveAnyAction(meta)
@@ -251,8 +235,8 @@ export class Policy<
       if (!this.matchesSubject(subject, ruleSubject, anySubject)) continue
 
       if (ruleConditions) {
-        // A conditional rule can never be satisfied by a bare-type/no-instance
-        // check - there's no instance data for the condition to inspect.
+        // A bare check has no instance for the conditions to inspect; without
+        // this guard, a condition such as { x: { $ne: 1 } } would match it.
         if (subject.instance === undefined) continue
         if (!this.resolver.evaluate(subject.instance, ruleConditions, this.resolveFieldMapper(subject))) continue
         return effect === "allow"
@@ -264,7 +248,6 @@ export class Policy<
     return false
   }
 
-  /** The subject's own `fieldMapper` (set via `createSubject`) takes precedence; `config.mapper`, keyed by the subject's resolved catalog name, is the fallback. */
   private resolveFieldMapper(subject: TSubjects): SubjectFieldMapper<unknown> | undefined {
     if (subject.fieldMapper) return subject.fieldMapper as SubjectFieldMapper<unknown>
     return this.config.mapper?.get(resolveName(this.subjectCatalog, subject.name))
@@ -282,7 +265,6 @@ export class Policy<
     return subjectName === ruleSubject || (anySubject !== DISABLED && ruleSubject === anySubject)
   }
 
-  /** Logs a warning, once per distinct id, when `value` is a dynamic (unnamed) Action/Subject missing from `reverseMap`. */
   private warnIfUnregisteredDynamic(
     value: { name: string, __dynamic?: true },
     reverseMap: Map<string, string>,

@@ -7,13 +7,7 @@ import { randomId } from "../lib/randomId.ts"
  * supplies the name, so this form has no `name` parameter of its own.
  */
 export interface CreateSubjectOptions<TData, TArgs extends unknown[] = [TData]> {
-  /**
-   * Maps one or more raw domain entities into this Subject's claims shape,
-   * so `.from(...)` can build a wrapped Subject straight from application
-   * data instead of a caller pre-shaping it for `.wrap()`. Omitted ->
-   * `.from(data)` falls back to the identity mapping, behaving exactly like
-   * `.wrap(data)`.
-   */
+  /** Maps raw domain entities to this Subject's claims for `.from(...)`; defaults to identity, so `.from(x)` behaves like `.wrap(x)`. */
   from?: (...args: TArgs) => TData
   /** Carried through every `.wrap()`/`.from()` call unchanged - see `SubjectFieldMapper`. */
   fieldMapper?: SubjectFieldMapper<TData>
@@ -41,7 +35,6 @@ function makeSubject<TData, TArgs extends unknown[]>(
   }
 }
 
-/** Creates a named Subject for `name`, optionally with a `SubjectFieldMapper`. */
 export function createSubject<TData = unknown, TArgs extends unknown[] = [TData]>(
   name: string,
   fieldMapper?: SubjectFieldMapper<TData>,

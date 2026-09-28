@@ -40,7 +40,6 @@ public class AppPolicyBuilder {
                     Condition.and(inOrg, isArchived)
                 ));
         } else {
-            // members can only touch tasks assigned to them, and only recent ones
             Condition<TaskSubject.Claims> inOrg = Condition.eq(TaskSubject.Claims::orgId, claims.orgId());
             Condition<TaskSubject.Claims> isAssignee = Condition.eq(TaskSubject.Claims::assigneeId, claims.userId());
             Condition<TaskSubject.Claims> isRecent = Condition.op(TaskSubject.Claims::createdAt, "$withinDays", 30);
