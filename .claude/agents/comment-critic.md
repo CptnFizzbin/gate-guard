@@ -41,8 +41,9 @@ comment can conform to the style guide and still be noise.
 
 Unless told otherwise, review every comment in `impl/js/src/**`, `impl/js/tests/**`, `impl/java/src/**` (main,
 examples, test), `eslint.config.ts`, `website/eslint.config.ts`, and `scripts/**`. If asked to review a diff or
-specific files, limit yourself to those. Skip Markdown files, code samples inside string literals, and tool directives
-(`// eslint-disable...`, `// @ts-expect-error`, `@SuppressWarnings`).
+specific files, limit yourself to those. Skip Markdown files, code samples inside string literals, tool directives
+(`// eslint-disable...`, `// @ts-expect-error`, `@SuppressWarnings`), and `// Arrange` / `// Act` / `// Assert`
+labels in tests - those are always kept, so never report them.
 
 Read the code around each comment before judging it.
 
