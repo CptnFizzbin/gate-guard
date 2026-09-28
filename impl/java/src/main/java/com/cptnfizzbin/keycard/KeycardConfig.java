@@ -27,22 +27,24 @@ public class KeycardConfig {
     private OperatorCatalog operators = new OperatorCatalog();
 
     /**
-     * When {@code true} (the default), {@link com.cptnfizzbin.keycard.builder.PolicyBuilder}
-     * and {@link com.cptnfizzbin.keycard.policy.Policy} run fail-fast catalog
-     * checks at construction - a dynamic Action/Subject used but never
-     * registered, or a loaded definition not satisfying its own
-     * {@code meta.actions}/{@code meta.subjects}/{@code meta.operators} - and
-     * {@code PolicyBuilder#buildDef()} attaches the derived {@code meta} block.
-     * Set {@code false} to skip both, e.g. in production once CI has run the
-     * checks.
+     * When {@code true} (the default), KeyCard runs fail-fast catalog checks -
+     * {@link com.cptnfizzbin.keycard.builder.PolicyBuilder}'s {@code allow()}/{@code deny()}
+     * reject a dynamic Action/Subject that isn't registered, and
+     * {@link com.cptnfizzbin.keycard.policy.Policy}'s constructor rejects a
+     * definition that doesn't satisfy its own {@code meta.actions}/{@code meta.subjects}/{@code meta.operators}
+     * - and {@code PolicyBuilder#buildDef()} attaches the derived {@code meta}
+     * block. Set {@code false} to skip both, e.g. in production once CI has run
+     * the checks.
      */
     private boolean emitMeta = true;
 
+    // TODO: implement emitTests - when true, PolicyBuilder#buildDef() should
+    // emit a tests block of shared, cross-language cases, and Policy should be
+    // able to run the cases a loaded definition carries
     /**
      * Reserved for embedding and running a policy's shared, cross-language
      * test cases (the {@code tests} block); has no effect.
      */
-    // TODO: wire emitTests up to the policy's tests block
     private boolean emitTests = false;
 
     /**

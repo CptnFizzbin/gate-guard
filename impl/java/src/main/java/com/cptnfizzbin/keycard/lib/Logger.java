@@ -1,6 +1,6 @@
 package com.cptnfizzbin.keycard.lib;
 
-/** A sink for KeyCard's non-fatal diagnostics, with the same shape as the JS implementation's {@code Logger}. */
+/** A sink for KeyCard's non-fatal diagnostics. */
 public interface Logger {
     default void warn(String message) {
         this.log(System.Logger.Level.WARNING, message);

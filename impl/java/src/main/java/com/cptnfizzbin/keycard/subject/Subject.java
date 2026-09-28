@@ -21,6 +21,10 @@ import java.util.UUID;
  * {@code (Subject, Claims)} constructor:
  * <pre>{@code
  * class ArticleSubject extends Subject<ArticleSubject.Claims, ArticleSubject> {
+ *     ArticleSubject() {
+ *         super("article");
+ *     }
+ *
  *     private ArticleSubject(Subject<Claims, ArticleSubject> prev, Claims instance) {
  *         super(prev, instance);
  *     }

@@ -14,7 +14,7 @@ import java.util.Map;
 
 /**
  * Loads the shared, spec-derived conformance fixtures under test/fixtures
- * (see the README there) that every implementation MUST pass. Not a test
+ * (see test/fixtures/v0/README.md) that every implementation MUST pass. Not a test
  * class itself - see {@link ConformanceFixtureTest}.
  */
 final class Fixtures {

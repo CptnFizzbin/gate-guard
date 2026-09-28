@@ -59,8 +59,11 @@ export class Policy<
    *   to {@link can} that doesn't carry its own; `emitMeta` (default `true`)
    *   enables catalog and operator coverage validation - see `KeycardConfig`.
    * @throws PolicyVersionException if `definition.version` is not supported
-   * @throws PolicyLoadException if a rule is malformed, or not covered by the
-   *   declared catalogs or registered operators
+   * @throws PolicyLoadException if a rule is malformed or not covered by the
+   *   declared catalogs, a `meta.operators` entry has no registered operator,
+   *   or two operators share a name
+   * @throws PolicyArgumentError if `emitMeta` is true and one Action/Subject is
+   *   registered under two catalog keys
    */
   constructor(
     definition: PolicyDefinition,
@@ -258,7 +261,7 @@ export class Policy<
       return effect === "allow"
     }
 
-    return false // Default deny.
+    return false
   }
 
   /** The subject's own `fieldMapper` (set via `createSubject`) takes precedence; `config.mapper`, keyed by the subject's resolved catalog name, is the fallback. */

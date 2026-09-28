@@ -92,6 +92,8 @@ public class PolicyBuilder {
             // A copy, so allow()/deny() calls made after this can't reach
             // back into an already-built definition (or a Policy made from it).
             .rules(new ArrayList<>(this.rules))
+            // FIXME: emitMeta(false) drops anyAction/anySubject too, so a configured
+            // wildcard token silently stops matching - see #49
             .meta(config.emitMeta() ? buildMeta() : null);
     }
 

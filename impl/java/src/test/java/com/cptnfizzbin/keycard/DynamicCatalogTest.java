@@ -24,6 +24,8 @@ public class DynamicCatalogTest {
 
     @Test
     public void actionCreateWithANameBehavesAsBeforeNotDynamic() {
+    // --- Action.create()/new Action() (no-arg) ---
+
         Action action = new Action("Read");
 
         assertEquals("Read", action.name());
@@ -48,6 +50,8 @@ public class DynamicCatalogTest {
 
     @Test
     public void subjectCreateWithANameBehavesAsBeforeNotDynamic() {
+    // --- Subject.create()/new Subject<>() (no-arg) ---
+
         Subject<?, ?> subject = new Subject<>("Article");
 
         assertEquals("Article", subject.name());
@@ -82,6 +86,8 @@ public class DynamicCatalogTest {
 
     @Test
     public void aKeyedCatalogsKeyNotTheDynamicDefsRandomIdIsWhatGetsSerialized() {
+    // --- PolicyBuilder: dynamic (no-name) Action/Subject resolved via a KeycardConfig catalog ---
+
         Action create = new Action();
         Subject<?, ?> article = new Subject<>();
 
@@ -161,6 +167,8 @@ public class DynamicCatalogTest {
 
     @Test
     public void aDynamicDefResolvesViaItsCatalogKeyToMatchARuleWrittenAgainstThatKey() {
+    // --- Policy: dynamic (no-name) Action/Subject resolved via a KeycardConfig catalog ---
+
         Action create = new Action();
         Subject<?, ?> article = new Subject<>();
 

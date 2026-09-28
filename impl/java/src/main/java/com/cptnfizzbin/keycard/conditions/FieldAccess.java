@@ -25,6 +25,10 @@ final class FieldAccess {
             return false;
         }
 
+        // Every missing-field path returns isBareNe(condition): the spec requires
+        // $ne to be the exact negation of $eq, and $eq on a missing field is
+        // false, so a bare $ne on a missing field must be true; every other
+        // condition on a missing field is false.
         if (subject instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) subject;
             if (!map.containsKey(fieldName)) return isBareNe(condition);
@@ -50,9 +54,6 @@ final class FieldAccess {
      * deeper, doesn't count.
      */
     private static boolean isBareNe(Object condition) {
-        // The spec requires $ne to be the exact negation of $eq, and $eq on a
-        // missing field is false, so a bare $ne on a missing field must be true;
-        // every other operator keeps the blanket false.
         // TODO: decide whether { $not: { $eq: x } } on a missing field should
         // also be true, since $not carries the same "exact negation" contract as $ne.
         return condition instanceof Map && ((Map<?, ?>) condition).keySet().equals(Set.of("$ne"));

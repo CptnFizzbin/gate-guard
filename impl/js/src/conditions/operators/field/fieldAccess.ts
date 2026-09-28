@@ -18,9 +18,6 @@ export function hasField(subject: unknown, fieldName: string): subject is Record
  * or nested deeper, doesn't count.
  */
 export function isBareNe<TSubject>(condition: Condition<TSubject>): boolean {
-  // The spec requires $ne to be the exact negation of $eq, and $eq on a
-  // missing field is false, so a bare $ne on a missing field must be true;
-  // every other operator keeps the blanket false.
   // TODO: decide whether `{ $not: { $eq: x } }` on a missing field should also
   // be true, since $not carries the same "exact negation" contract as $ne.
   return (
@@ -70,5 +67,8 @@ export function checkField<TSubject>(subject: TSubject, fieldName: string, condi
     return ctx.resolveFieldSubcondition(ctx.fieldMapper[fieldName](subject), condition)
   }
 
+  // The spec requires $ne to be the exact negation of $eq, and $eq on a
+  // missing field is false, so a bare $ne on a missing field must be true;
+  // every other condition on a missing field is false.
   return hasField(subject, fieldName) ? ctx.resolveFieldSubcondition(subject[fieldName], condition) : isBareNe(condition)
 }

@@ -65,7 +65,7 @@ public class ConditionResolverTest {
     }
 
     /**
-     * v1 supports only top-level field access: a second level of field narrowing always evaluates to false.
+     * The spec supports only top-level field access: a second level of field narrowing always evaluates to false.
      */
     @Test
     public void testNestedFieldConditionIsRejected() {

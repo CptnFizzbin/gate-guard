@@ -28,6 +28,8 @@ import static org.junit.Assert.*;
  * {@code KeycardConfig#emitMeta}.
  */
 public class VisionApiTest {
+    // --- ActionCatalog.set / SubjectCatalog.set ---
+
     @Test
     public void actionCatalogSetRegistersAndReturnsTheAction() {
         ActionCatalog catalog = new ActionCatalog();
@@ -77,6 +79,8 @@ public class VisionApiTest {
         assertThrows(PolicyArgumentException.class, () -> catalog.set(new Subject<>()));
     }
 
+    // --- Subject<T, TSelf>: a dedicated subclass's wrap()/from() return its own subtype, no cast ---
+
     private static class ArticleSubject extends Subject<String, ArticleSubject> {
         ArticleSubject() {
             super();
@@ -105,6 +109,8 @@ public class VisionApiTest {
         assertEquals("owner-1", wrapped.claims().orElseThrow());
     }
 
+    // --- Condition.where / the getter-scoped Condition.op ---
+
     @Getter
     @AllArgsConstructor
     static class Article {
@@ -132,6 +138,8 @@ public class VisionApiTest {
         assertFalse(policy.can(read, subject.wrap(new Article(1, List.of(), "published"))));
     }
 
+    // --- OperatorCatalog.set / ConditionOperator ---
+
     @Test
     public void operatorCatalogSetRegistersAFlatTwoArgOperatorAndReturnsIt() {
         OperatorCatalog catalog = new OperatorCatalog();
@@ -152,6 +160,8 @@ public class VisionApiTest {
         assertTrue(policy.can(read, subject.wrap(new Article(1, List.of(), "draft"))));
         assertFalse(policy.can(read, subject.wrap(new Article(1, List.of(), "published"))));
     }
+
+    // --- KeycardConfig.emitMeta ---
 
     @Test
     public void emitMetaDefaultsToTrueAndAttachesMeta() {

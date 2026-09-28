@@ -9,7 +9,7 @@ import java.time.Instant;
 public class AppOperators {
     public static final OperatorCatalog catalog = new OperatorCatalog();
 
-    /** {@code $withinDays}: true when the subject's Instant field is at most {@code days} days in the past. */
+    /** {@code $withinDays}: true when the subject's Instant field is no more than {@code days} whole days before now (future instants also match). */
     public static ConditionOperator WithinDays = catalog.set("$withinDays", (subjectValue, days) ->
         Duration.between((Instant) subjectValue, Instant.now()).toDays() <= ((Number) days).longValue());
 }

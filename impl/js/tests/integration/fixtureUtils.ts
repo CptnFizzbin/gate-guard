@@ -21,7 +21,7 @@ export function actionArgFor(name: string): Action {
 
 /**
  * The subject argument every fixture-driven suite passes to `Policy.can`:
- * a bare Subject when `claims` is absent, otherwise one wrapping `claims`.
+ * a bare Subject when `claims` is falsy, otherwise one wrapping `claims`.
  */
 export function subjectArgFor(name: string, claims?: JsonValue): Subject {
   const subject = createSubject(name)

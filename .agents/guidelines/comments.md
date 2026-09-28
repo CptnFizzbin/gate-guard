@@ -16,8 +16,8 @@ that don't fit any style (or that mix them) should be rewritten or removed. The 
 
 ```ts
 // ✅ — describes the contract, no history, no internals
-/** Returns `true` when `policy` allows `action` on `subject`; the last matching rule wins. */
-export const can = (policy: Policy, action: string, subject: Subject): boolean => { ... }
+/** Returns the action wildcard token in effect: `"_ANY_"` when `meta.anyAction` is absent, `DISABLED` when it is `null`. */
+export function effectiveAnyAction(meta?: Meta): string | typeof DISABLED { ... }
 
 // ❌ — refers to an old version of the code
 /** Checks the rule. Replaces the old first-match evaluation from before the spec rework. */
@@ -35,15 +35,16 @@ export const can = (policy: Policy, action: string, subject: Subject): boolean =
   form it does.
 - SHOULD reference a GitHub issue when one exists.
 
-```ts
-// ✅ — explains why, references the issue
-// Compare with Object.is so NaN matches NaN, which the spec requires for $eq
-// across every implementation. See #123.
-return Object.is(actual, expected)
+```java
+// ✅ — explains why the obvious approach (Number.equals) is wrong here
+// Not Number.equals: Integer.equals(Long) is always false, but a claims field
+// declared long must equal the Integer a JSON/YAML parser produces for the
+// same literal.
+if (isFloatingPoint(a) || isFloatingPoint(b)) { ... }
 
 // ❌ — narrates what the line does
-// Check if actual equals expected
-return Object.is(actual, expected)
+// Compare the two numbers
+return toBigDecimal(a).compareTo(toBigDecimal(b)) == 0;
 ```
 
 **Task** comments (`// TODO` / `// FIXME`) flag outstanding work or a known defect at the line they sit on:
@@ -57,14 +58,18 @@ return Object.is(actual, expected)
   current code is correct as written — a Task comment marks something that still needs doing, not something that's
   done and merely worth knowing about.
 
-```java
-// ✅ — specific about what's outstanding, references the issue
-// TODO: accept policy spec 1.1 once the $regex operator lands (#145)
-private static final String SUPPORTED_SPEC = "1.0";
+```ts
+// ✅ — specific about what's outstanding and when it can be done
+// TODO: switch back to "detect" once eslint-plugin-react supports ESLint 10;
+// "detect" calls context.getFilename(), which ESLint 10 removed.
+version: "19.0",
+```
 
-// ✅ — flags a known defect, not just a stylistic gripe
-// FIXME: BigDecimal fields fall through to the non-numeric branch, so $gt never matches them — see #211
-if (value instanceof Number number) { ... }
+```java
+// ✅ — flags a known defect and references the issue
+// FIXME: emitMeta(false) drops anyAction/anySubject too, so a configured
+// wildcard token silently stops matching - see #49
+.meta(config.emitMeta() ? buildMeta() : null);
 
 // ❌ — too vague to act on
 // TODO: fix this later
@@ -74,5 +79,8 @@ if (value instanceof Number number) { ... }
 
 - `// Arrange` / `// Act` / `// Assert` section labels in tests — they're structural section labels, not
   documentation or explanation.
+- Section labels that group related declarations — test groups (`// --- operator registry collisions ---`), export
+  groups in an index file (`// Policy`), or rule groups in a config (`...{ // @typescript-eslint rules`). Keep them
+  short and descriptive; like Arrange/Act/Assert, they're structure rather than documentation or explanation.
 - Tool directives such as `// eslint-disable-next-line`, `// @ts-expect-error`, or `// CHECKSTYLE:OFF` — they
   instruct tooling, not readers.

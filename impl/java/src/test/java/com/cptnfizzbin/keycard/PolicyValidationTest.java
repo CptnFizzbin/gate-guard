@@ -96,6 +96,8 @@ public class PolicyValidationTest {
             ));
     }
 
+    // --- operator registry collisions ---
+
     @Test
     public void throwsPolicyLoadExceptionWhenACustomOperatorCollidesWithABuiltin() {
         assertThrows(PolicyLoadException.class, () ->
@@ -112,6 +114,7 @@ public class PolicyValidationTest {
             )));
     }
 
+    // --- meta.operators promotes "cataloged but never registered" to a construction-time throw ---
     // Spec: https://keycard.cptnfizzbin.dev/spec/v0#metaoperators
 
     @Test
@@ -143,6 +146,8 @@ public class PolicyValidationTest {
         ); // should not throw
     }
 
+    // --- meta.anyAction/meta.anySubject four-way dispatch ---
+
     @Test
     public void falseDisablesTheActionWildcardJustLikeNull() {
         PolicyDefinition.Meta meta = new PolicyDefinition.Meta().anyAction(false);
@@ -156,6 +161,8 @@ public class PolicyValidationTest {
         assertTrue(policy.cannot(new Action("Read"), new Subject<>("Article")));
         assertTrue(policy.can(new Action("_ANY_"), new Subject<>("Article")));
     }
+
+    // --- PolicyBuilder derives meta.actions/subjects/operators from usage; only the wildcard tokens are ever declared explicitly ---
 
     @Test
     public void buildDefDerivesActionsSubjectsAndOperatorsFromWhatWasActuallyUsed() {
@@ -212,6 +219,8 @@ public class PolicyValidationTest {
             new PolicyBuilder(new KeycardConfig().anyAction(new Action("*")).anySubject(new Subject<>("*")))
                 .allow(new Action("*"), new Subject<>("*"), Condition.op("owner_id", 1)));
     }
+
+    // --- KeycardConfig, accepted by both PolicyBuilder and Policy ---
 
     @Test
     public void keycardConfigActionsAndSubjectsAreFoldedIntoMetaAlongsideWhatUsageDerives() {

@@ -14,6 +14,7 @@ export interface KeycardConfig<TOperators extends AnyOperator = never> {
   // Action/Subject rather than a builder's TActions/TSubjects: tying them to
   // those generics would infer TActions/TSubjects from this config alone and
   // narrow what allow/deny accept everywhere else on the same builder.
+
   /**
    * Declared action vocabulary, additive to `meta.actions` -
    * each key becomes the serialized name for its entry, which is how a
@@ -45,14 +46,15 @@ export interface KeycardConfig<TOperators extends AnyOperator = never> {
   /** Logger for non-fatal diagnostics, such as an unregistered dynamic Action/Subject passed to `.can()`/`.cannot()`/`.require()`. Defaults to `getLogger()`. */
   logger?: Logger
   /**
-   * When `true` (the default), `PolicyBuilder`/`Policy` validate catalogs and
-   * operators at construction - an unregistered dynamic Action/Subject, a
-   * duplicate catalog key, or a `meta.operators` entry with no registered
-   * operator throws immediately - and a built `PolicyDefinition` includes the
-   * diagnostic `meta.actions`/`meta.subjects`/`meta.operators`. Set `false`
-   * to skip both, e.g. in production once CI has run the validation.
-   * `meta.anyAction`/`meta.anySubject` are always emitted when non-default,
-   * since evaluation depends on them.
+   * When `true` (the default), KeyCard runs fail-fast catalog checks -
+   * `PolicyBuilder`/`Policy` reject one Action/Subject registered under two
+   * catalog keys, `allow()`/`deny()` reject a dynamic Action/Subject that isn't
+   * registered, and `Policy` rejects a definition that doesn't satisfy its own
+   * `meta.actions`/`meta.subjects`/`meta.operators` - and a built
+   * `PolicyDefinition` includes the diagnostic `meta.actions`/`meta.subjects`/
+   * `meta.operators`. Set `false` to skip both, e.g. in production once CI has
+   * run the checks. `meta.anyAction`/`meta.anySubject` are always emitted when
+   * non-default, since evaluation depends on them.
    */
   emitMeta?: boolean
 }

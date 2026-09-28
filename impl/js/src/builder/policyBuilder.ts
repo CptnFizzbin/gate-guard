@@ -64,6 +64,8 @@ export class PolicyBuilder<
    *   the built `Policy`; `emitMeta` (default `true`) enables catalog
    *   validation and the diagnostic `meta` fields in {@link buildDef}'s
    *   output - see `KeycardConfig`.
+   * @throws PolicyArgumentError if `emitMeta` is true and one Action/Subject is
+   *   registered under two catalog keys
    */
   constructor(config: KeycardConfig<TOperators> = {}) {
     this.emitMeta = config.emitMeta ?? true
@@ -123,6 +125,8 @@ export class PolicyBuilder<
     const def: PolicyDefinition = {
       version: BUILDER_VERSION,
       meta: {}, // Reserves meta's position ahead of rules, so serialized JSON lists it first
+      // FIXME: shares the builder's live array, so later allow()/deny() calls
+      // mutate an already-built definition - see #50
       rules: this.rules,
     }
 
@@ -136,7 +140,7 @@ export class PolicyBuilder<
   }
 
   /**
-   * Returns the `meta` block: non-default `anyAction`/`anySubject` always, and
+   * Returns the `meta` block: any non-default `anyAction`/`anySubject`, plus
    * (when `emitMeta` is true) the `actions`/`subjects`/`operators` used or
    * declared so far.
    */
