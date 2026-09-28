@@ -1,17 +1,11 @@
 package com.cptnfizzbin.keycard.conditions;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 
-/**
- * Every operator {@link ConditionResolver} understands natively,
- * as {@link Operator} instances - the
- * same type a custom, host-application-supplied operator uses, so built-in
- * and custom operators are constructed, registered, and dispatched
- * identically.
- */
 final class DefaultOperators {
     private DefaultOperators() {}
 
@@ -31,7 +25,6 @@ final class DefaultOperators {
         Operator.of("$field", (s, v, ctx) -> fieldOpCheck(ctx, s, v))
     );
 
-    /** Every built-in operator name - the single source of truth for "is this name built-in". */
     static final Set<String> NAMES = ALL.stream().map(Operator::name).collect(Collectors.toUnmodifiableSet());
 
     /** $gt/$gte/$lt/$lte - numeric-only, IEEE-754 double semantics. */
@@ -46,22 +39,20 @@ final class DefaultOperators {
         return cmp.test(a, b);
     }
 
-    /** $in - operand must be a collection; containment uses $eq semantics per element. */
     private static boolean inCheck(Object subject, Object operand) {
-        if (!(operand instanceof List)) {
+        if (!(operand instanceof Collection<?> collection)) {
             Diagnostics.logTypeIssue("$in", "expected an array operand, got " + Diagnostics.typeName(operand));
             return false;
         }
-        return GroupConditions.in(subject, (List<?>) operand);
+        return GroupConditions.in(subject, collection);
     }
 
-    /** $has - subject must be a collection. */
     private static boolean hasCheck(Object subject, Object value) {
-        if (!(subject instanceof List)) {
+        if (!(subject instanceof Collection<?> collection)) {
             Diagnostics.logTypeIssue("$has", "expected an array subject, got " + Diagnostics.typeName(subject));
             return false;
         }
-        return GroupConditions.has((List<?>) subject, value);
+        return GroupConditions.has(collection, value);
     }
 
     /** $substr - a null subject is an ordinary non-match, not a type issue; an invalid pattern always is. */
@@ -81,7 +72,6 @@ final class DefaultOperators {
         return parsed.matches(String.valueOf(subject));
     }
 
-    /** $or - operand must be an array; {@code $or: []} is vacuously false. */
     private static boolean orCheck(OperatorContext ctx, Object subject, Object operand) {
         if (!(operand instanceof List)) {
             Diagnostics.logTypeIssue("$or", "expected an array operand, got " + Diagnostics.typeName(operand));
@@ -95,7 +85,6 @@ final class DefaultOperators {
         return LogicConditions.or(ctx, subject, list);
     }
 
-    /** $and - operand must be an array; {@code $and: []} is vacuously true. */
     private static boolean andCheck(OperatorContext ctx, Object subject, Object operand) {
         if (!(operand instanceof List)) {
             Diagnostics.logTypeIssue("$and", "expected an array operand, got " + Diagnostics.typeName(operand));

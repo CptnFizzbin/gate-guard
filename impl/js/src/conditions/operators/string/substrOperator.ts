@@ -2,20 +2,13 @@ import { PolicyTypeMismatchError } from "../../../errors/policyTypeMismatchError
 import { escapeRegExp } from "../../../lib/regex.ts"
 import { createOperator } from "../operator.ts"
 
-/**
- * Compiled patterns, keyed by their `$substr` source. Patterns come from
- * policy documents, so the set in play is small and stable - but it's
- * still bounded, and simply cleared once full, so a process that loads
- * many distinct policies over its lifetime can't grow it without limit.
- */
+// Bounded, and simply cleared once full: patterns come from policy documents,
+// so the working set is small, but a long-lived process can load many
+// distinct policies.
 const compiledPatterns = new Map<string, RegExp>()
 const MAX_COMPILED_PATTERNS = 1000
 
-/**
- * Compiles a `$substr` pattern to an equivalent native `RegExp` - throws
- * {@link PolicyTypeMismatchError} for a structurally invalid one (a `^`
- * anywhere but first, a `$` anywhere but last).
- */
+/** @throws PolicyTypeMismatchError for a `^` anywhere but first, or a `$` anywhere but last. */
 function compilePattern(pattern: string): RegExp {
   let regexPattern = ""
   for (let i: number = 0; i < pattern.length; i++) {
@@ -24,26 +17,22 @@ function compilePattern(pattern: string): RegExp {
 
     switch (char) {
       case "\\":
-        // A trailing "\" with nothing after it is ignored.
         if (!next) break
 
         regexPattern += escapeRegExp(next)
-        i++ // skip next
+        i++
 
         break
       case "*":
         regexPattern += ".*"
         break
       case "^":
-        // Only meaningful as the pattern's first character - anywhere
-        // else it's a structurally invalid pattern.
         if (i !== 0) throw new PolicyTypeMismatchError({
           value: { expected: "'^' only as the first character", received: `'^' at position ${i}` },
         })
         regexPattern += "^"
         break
       case "$":
-        // Only meaningful as the pattern's last character.
         if (i !== pattern.length - 1) throw new PolicyTypeMismatchError({
           value: { expected: "'$' only as the last character", received: `'$' at position ${i}` },
         })
@@ -54,9 +43,7 @@ function compilePattern(pattern: string): RegExp {
     }
   }
 
-  // The "s" flag makes "." match newlines too, so a wildcard is truly
-  // "any character", per the requirement that lazy/greedy wildcards be
-  // match-equivalent (both just need one gap-filling run of characters).
+  // "s" so * also spans newlines - a wildcard means any character.
   return new RegExp(regexPattern, "s")
 }
 
@@ -71,13 +58,14 @@ function getCompiledPattern(pattern: string): RegExp {
 }
 
 /**
- * `$substr` - a small, deliberately non-regex substring pattern
- * language, compiled here to a native `RegExp` (the spec explicitly
- * permits this: implementations MAY implement `$substr` however they
- * like internally, including compiling it to the host language's regex
- * engine, as long as the observable match/no-match result agrees with
- * the spec for every subject/pattern). Each distinct pattern is compiled
- * once and cached.
+ * `$substr` - matches the subject's string form against a small, non-regex
+ * pattern: `*` matches any run of characters, a leading `^` or trailing `$`
+ * anchors the match, and `\` escapes the next character. Unanchored
+ * patterns match anywhere in the subject.
+ *
+ * ```ts
+ * { title: { $substr: "^Draft:*" } }
+ * ```
  */
 export const SubstrOperator = createOperator("$substr", (subject, pattern) => {
   if (subject === null || subject === undefined) return false
@@ -89,6 +77,7 @@ export const SubstrOperator = createOperator("$substr", (subject, pattern) => {
     },
   })
 
-  // No "g"/"y" flag, so the cached RegExp carries no lastIndex state between calls.
+  // Safe to reuse a cached RegExp: without the "g"/"y" flags, test() keeps no
+  // lastIndex state between calls.
   return getCompiledPattern(pattern).test(String(subject))
 })

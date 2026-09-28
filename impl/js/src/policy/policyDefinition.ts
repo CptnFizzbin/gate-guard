@@ -4,14 +4,9 @@ import type { AnyCondition } from "../conditions/condition.ts"
 export type Effect = "allow" | "deny"
 
 /**
- * `[Effect, Action, Subject, Conditions?]`. Action
- * and Subject are always plain strings here: `PolicyDefinition` is the
- * wire format (JSON-serializable, shared across languages), never the
- * ergonomic `Action`/`Subject` objects `PolicyBuilder`/`Policy`'s public
- * API accepts - those are reduced to their `.name` before ever reaching a
- * `RuleTuple`. A three-element tuple is an unconditional rule; `rules` is
- * a single, ordered list of these (not split by effect) - declaration
- * order is significant.
+ * `[Effect, Action, Subject, Conditions?]`, with Action and Subject as plain
+ * name strings, since `PolicyDefinition` is the JSON-serializable wire format
+ * shared across languages. A three-element tuple is an unconditional rule.
  */
 export type RuleTuple =
   | [Effect, string, string]

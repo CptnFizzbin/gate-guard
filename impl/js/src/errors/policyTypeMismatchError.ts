@@ -6,11 +6,10 @@ export interface TypeMismatchInfo {
 }
 
 /**
- * Signals that a condition can't be meaningfully evaluated against the
- * value in hand (a type mismatch, or a malformed operand). Thrown from an
- * operator's resolver - built-in or custom - it's caught by the
- * `createOperator` wrapper, logged as a warning, and the condition
- * evaluates to `false`.
+ * Signals that a condition can't be evaluated against the value in hand (a
+ * type mismatch or malformed operand). Thrown from an operator built with
+ * `createOperator`, it's logged as a warning and the condition evaluates to
+ * `false` instead of propagating.
  */
 export class PolicyTypeMismatchError extends PolicyError {
   constructor(

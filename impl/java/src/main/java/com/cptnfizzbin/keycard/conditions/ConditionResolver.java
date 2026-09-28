@@ -3,11 +3,9 @@ package com.cptnfizzbin.keycard.conditions;
 import java.util.Map;
 
 /**
- * Implements the condition language and its evaluation
- * semantics. Built-in and custom {@link Operator}s share one registry and
- * are dispatched identically - this class is just the dispatch
- * loop: it looks a `$`-prefixed key up in that registry and delegates, or
- * narrows into a bare field name.
+ * Evaluates a Conditions tree against a subject, using the built-in operators
+ * plus any custom operators in the {@link OperatorCatalog} it was constructed
+ * with.
  */
 public final class ConditionResolver {
     private final OperatorCatalog registry;
@@ -26,7 +24,7 @@ public final class ConditionResolver {
         return evaluate(subject, condition, true);
     }
 
-    /** Enforces that {@code names} are all registered - built-in or custom - used to check {@code meta.operators} coverage in full at Policy construction time. */
+    /** Throws a {@link com.cptnfizzbin.keycard.errors.PolicyLoadException} if any name in {@code names} isn't registered, built-in or custom. */
     public void assertAllRegistered(Iterable<String> names) {
         for (String name : names) {
             if (!registry.containsKey(name)) {
@@ -43,7 +41,7 @@ public final class ConditionResolver {
         }
 
         if (condition == null || condition instanceof String || condition instanceof Number || condition instanceof Boolean) {
-            // bare-value shorthand for $eq (including explicit null - not a wildcard).
+            // A bare value is shorthand for $eq; an explicit null means "equals null", not a wildcard.
             return StringConditions.eq(subject, condition);
         }
 
@@ -51,8 +49,8 @@ public final class ConditionResolver {
             return false;
         }
 
-        // every key MUST be evaluated and ANDed together - no key may
-        // "consume" the whole object or cause sibling keys to be ignored.
+        // The spec requires every key to be evaluated and ANDed together - no
+        // key may "consume" the whole object or cause sibling keys to be ignored.
         for (Map.Entry<?, ?> entry : condMap.entrySet()) {
             if (!evaluateKey(subject, String.valueOf(entry.getKey()), entry.getValue(), canNarrowField)) {
                 return false;
@@ -61,11 +59,6 @@ public final class ConditionResolver {
         return true;
     }
 
-    /**
-     * any key starting with "$" is an operator lookup, never
-     * a field name - built-in and custom operators are both resolved the
-     * same way, by name, against the same registry.
-     */
     private boolean evaluateKey(Object subject, String key, Object value, boolean canNarrowField) {
         OperatorContext ctx = contextFor(canNarrowField);
 

@@ -1,10 +1,4 @@
-/**
- * A named, type-safe action - the Action position of a rule,
- * wrapped for compile-time safety. Always constructed via `createAction`;
- * `__brand` is a runtime discriminant (distinguishing an Action from a
- * Subject, and from an arbitrary object, at a duck-typed boundary) as well
- * as a compile-time one.
- */
+/** A named action - the Action position of a rule. Construct via `createAction`. */
 export interface Action<T extends string = string> {
   readonly name: T
   readonly __brand: "action"

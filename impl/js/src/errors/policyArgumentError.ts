@@ -1,10 +1,10 @@
 import { PolicyError } from "./policyError.ts"
 
 /**
- * Thrown immediately by `PolicyBuilder`'s `allow()`/`deny()` when called
- * with a rule wildcarded on both the action and the subject that also
- * carries a Conditions element. Callers get this at the call site, rather than waiting for
- * `buildDef()`/`Policy.from(...)` to eventually catch it.
+ * Thrown at the call site when `PolicyBuilder` or a `KeycardConfig` catalog
+ * is given an invalid argument: a rule wildcarded on both action and subject
+ * that carries a Conditions element, an unregistered dynamic Action/Subject,
+ * or one Action/Subject registered under two catalog keys.
  */
 export class PolicyArgumentError extends PolicyError {
   constructor(message: string) {

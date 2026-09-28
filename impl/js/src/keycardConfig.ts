@@ -3,36 +3,22 @@ import type { AnyOperator, OperatorCatalog } from "./conditions/operators/operat
 import type { Logger } from "./lib/logger.ts"
 import type { Subject, SubjectCatalog, SubjectFieldMapperCatalog } from "./subject/index.ts"
 
-/**
- * Optional, shared config both `Policy` and `PolicyBuilder` accept as their
- * sole extra constructor argument - one object bundling the actions/
- * subjects a policy is written against, its custom operators, and the
- * SubjectFieldMappers its subjects need, built once and handed to both
- * rather than kept in sync by hand. Every field is independently optional.
- *
- * `actions`/`subjects`/`anyAction`/`anySubject` are deliberately typed
- * against the base `Action`/`Subject` (not a builder's `TActions`/
- * `TSubjects`) - tying them to those generics would infer `TActions`/
- * `TSubjects` from this config alone and narrow what `allow`/`deny` accept
- * everywhere else on the same builder.
- */
+/** Config shared by `Policy` and `PolicyBuilder`, so one object can be handed to both. */
 export interface KeycardConfig<TOperators extends AnyOperator = never> {
+  // actions/subjects/anyAction/anySubject are typed against the base
+  // Action/Subject rather than a builder's TActions/TSubjects: tying them to
+  // those generics would infer TActions/TSubjects from this config alone and
+  // narrow what allow/deny accept everywhere else on the same builder.
+
   /**
-   * Declared action vocabulary, additive to `meta.actions` -
-   * each key becomes the serialized name for its entry, which is how a
-   * `createAction()` call with no name (see {@link Action.__dynamic}) gets
-   * a real, stable name. A named entry may still be given its own key
-   * (if using a catalog, defining the name is optional) - the
-   * catalog key always wins over the entry's own name.
+   * Declared action vocabulary, additive to `meta.actions`. Each key is its
+   * entry's serialized name and always wins over the entry's own name, which
+   * is how a nameless `createAction()` gets a stable name.
    */
   actions?: ActionCatalog
   /** Declared subject vocabulary, additive to `meta.subjects` - see `actions`, symmetric for Subjects. */
   subjects?: SubjectCatalog
-  /**
-   * Custom operators to register alongside the built-ins - either an
-   * `AnyOperator[]` (built via `createOperator`) or an `OperatorCatalog`
-   * (a bare `{ $name: resolver }` map, no `createOperator` call needed).
-   */
+  /** Custom operators to register alongside the built-ins. */
   operators?: TOperators[] | OperatorCatalog
   /**
    * The action wildcard token - undeclared by default, in which case
@@ -46,25 +32,22 @@ export interface KeycardConfig<TOperators extends AnyOperator = never> {
   /** SubjectFieldMappers registered by subject name - consulted when the Subject in hand doesn't carry its own `fieldMapper`. */
   mapper?: SubjectFieldMapperCatalog
   /**
-   * Logger for every non-fatal diagnostic a `Policy` emits - a condition
-   * type mismatch or malformed condition during evaluation, and an
-   * unregistered dynamic Action/Subject encountered at `.can()`/
-   * `.cannot()`/`.require()` time. Falls back to the module-level logger
-   * (see `setLogger`) when unset.
+   * Logger for non-fatal diagnostics: condition type mismatches and malformed
+   * conditions during evaluation, and an unregistered dynamic Action/Subject
+   * passed to `.can()`/`.cannot()`/`.require()`. Defaults to the module-level
+   * logger set via `setLogger()`.
    */
   logger?: Logger
   /**
-   * Gates two things together, both worth paying for in dev and dead
-   * weight in prod once CI has already run them once: the eager catalog/
-   * operator validation `PolicyBuilder`/`Policy` do at construction (an
-   * unregistered dynamic Action/Subject, a duplicate catalog key, a custom
-   * operator `meta.operators` declares but nothing registered - all fail
-   * loudly, immediately, when this is `true`) and the diagnostic
-   * `meta.actions`/`meta.subjects`/`meta.operators` a built
-   * `PolicyDefinition` carries alongside its `rules` (omitted when this is
-   * `false` - `meta.anyAction`/`meta.anySubject`, being functionally
-   * required for evaluation rather than diagnostic, are always emitted
-   * when non-default). Defaults to `true`.
+   * When `true` (the default), KeyCard runs fail-fast catalog checks -
+   * `PolicyBuilder`/`Policy` reject one Action/Subject registered under two
+   * catalog keys, `allow()`/`deny()` reject a dynamic Action/Subject that isn't
+   * registered, and `Policy` rejects a definition that doesn't satisfy its own
+   * `meta.actions`/`meta.subjects`/`meta.operators` - and a built
+   * `PolicyDefinition` includes the diagnostic `meta.actions`/`meta.subjects`/
+   * `meta.operators`. Set `false` to skip both, e.g. in production once CI has
+   * run the checks. `meta.anyAction`/`meta.anySubject` are always emitted when
+   * non-default, since evaluation depends on them.
    */
   emitMeta?: boolean
 }

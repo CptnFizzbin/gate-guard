@@ -31,13 +31,10 @@ export type ObjectCondition<TSubject extends object, TCustom> =
   | { $field: FieldTuple<TSubject, TCustom> }
 
 /**
- * v1 supports only top-level field access: once a
- * field condition (bare-key or `$field`) has narrowed once, its own
- * `Condition` MUST NOT narrow again. This is the same shape as
- * {@link Condition}, minus {@link ObjectCondition} - comparison,
- * collection, string, logical, and custom operators all still apply to the
- * narrowed value, but a further field condition would attempt a second
- * level of nesting, which isn't part of v1.
+ * The condition applied to a field's value once a field condition (bare-key
+ * or `$field`) has narrowed into it: the same shape as {@link Condition}
+ * minus {@link ObjectCondition}, since the spec allows only one level of
+ * field access.
  */
 export type FieldValueCondition<TSubject, TCustom = never> =
   | FieldLogicCondition<TSubject, TCustom>

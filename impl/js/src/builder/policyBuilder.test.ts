@@ -29,9 +29,7 @@ describe("PolicyBuilder: meta.actions/subjects/operators are derived from usage"
       .allow(createAction("Read"), createSubject("Article"))
       .buildDef()
 
-    // Undeclared -> the "_ANY_" default applies - a config-less
-    // PolicyBuilder MUST NOT come out as "explicitly disabled" (that's
-    // what an explicit null does).
+    // Undeclared, not disabled - an explicit null would turn the wildcard off.
     expect(def.meta?.anyAction).toBeUndefined()
     expect(def.meta?.anySubject).toBeUndefined()
   })
@@ -42,8 +40,6 @@ describe("PolicyBuilder: meta.actions/subjects/operators are derived from usage"
       .allow(createAction("Read"), createSubject("*"))
       .build()
 
-    // "*" is now the action wildcard token: a rule naming it as its
-    // action matches any incoming action.
     expect(policy.can(createAction("AnythingGoes"), createSubject("Article"))).toBe(true)
 
     // The subject wildcard is disabled (null): a rule's literal "*"
@@ -130,8 +126,6 @@ describe("PolicyBuilder: dynamic (no-name) Action/Subject resolved via a Keycard
   })
 
   test("an explicitly-named Action/Subject in a keyed catalog is still resolved to its catalog key", () => {
-    // "if using a catalog, defining the name is optional" - a catalog key
-    // wins for any entry, named or not.
     const create = createAction("Create")
     const article = createSubject("Article")
 

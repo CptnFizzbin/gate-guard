@@ -11,16 +11,11 @@ import { DefaultOperators } from "./operators/defaultOperators.ts"
 import type { FieldMapperContext } from "./operators/field/fieldAccess.ts"
 import { checkField } from "./operators/field/fieldAccess.ts"
 
-/** Every operator name {@link ConditionResolver} understands out of the box - the single source of truth for "is this name built-in". */
 export const BUILTIN_OPERATOR_NAMES: ReadonlySet<string> = new Set(DefaultOperators.map((op) => op.name))
 
 /**
- * Implements the condition language and its
- * evaluation semantics. Every operator's own behavior lives in
- * `./operators/**` - this class is just the dispatch loop: it looks a
- * `$`-prefixed key up in its registry (built-ins plus whatever custom
- * `Operator`s the caller registered) and delegates, or narrows into a
- * bare field name.
+ * Evaluates a Conditions tree against a subject, using the built-in operators
+ * plus any custom operators it was constructed with.
  */
 export class ConditionResolver {
   private readonly operatorRegistry = new Map<string, AnyOperator>()
@@ -30,14 +25,12 @@ export class ConditionResolver {
 
   /**
    * @param operators custom operators to register alongside the built-ins
-   * - built-in and custom operators share this one array-based
-   *   entry point. Constructing this with a name collision (a custom
-   *   operator sharing a `$name` with a built-in, or with another operator
-   *   in `operators`) MUST throw a {@link PolicyLoadException} immediately
-   *   - never a silent overwrite.
-   * @param logger where type-mismatch and malformed-condition diagnostics
-   *   go - defaults to the module-level `getLogger()`, looked up fresh on
-   *   every warning so a later `setLogger()` still takes effect.
+   * @param logger receives type-mismatch and malformed-condition diagnostics;
+   *   defaults to the module-level logger, including one set via `setLogger()`
+   *   after this resolver was constructed.
+   * @throws PolicyLoadException if an operator's name collides with a
+   *   built-in or with another operator in `operators`
+   * @throws PolicyArgumentError if an operator's name isn't `$`-prefixed
    */
   constructor(operators: AnyOperator[] = [], logger?: Logger) {
     this.explicitLogger = logger
@@ -57,13 +50,7 @@ export class ConditionResolver {
     }
   }
 
-  /**
-   * throws if any name in `names` isn't
-   * registered on this resolver - built-in or custom. Used by `Policy` to
-   * enforce `meta.operators` registration coverage in full at construction
-   * time, regardless of whether any rule actually reaches a given operator
-   * during evaluation.
-   */
+  /** Throws a {@link PolicyLoadException} if any name in `names` isn't registered on this resolver, built-in or custom. */
   assertAllRegistered(names: Iterable<string>): void {
     for (const name of names) {
       if (!this.operatorRegistry.has(name)) {
@@ -75,26 +62,17 @@ export class ConditionResolver {
   }
 
   /**
-   * @param fieldMapper when given, tried first for any field looked up
-   *   directly on `subject` - anywhere in the condition tree that `subject`
-   *   is still the object in scope (bare-key/`$field` access at the top
-   *   level, and inside `$and`/`$or`/`$not`, none of which narrow). Never
-   *   consulted once a field access has narrowed once - v1 permits only
-   *   one level of field narrowing - so a field the mapper
-   *   doesn't define, or any nested access, falls back to ordinary
-   *   property access.
+   * Returns whether `subject` satisfies `condition`.
+   *
+   * @param fieldMapper when given, tried first for any field read directly
+   *   off `subject`, including inside `$and`/`$or`/`$not`. A field the mapper
+   *   doesn't define, or any field read after narrowing into a nested value,
+   *   uses ordinary property access.
    */
   evaluate<TSubject>(subject: TSubject, condition: Condition<TSubject>, fieldMapper?: SubjectFieldMapper<TSubject>): boolean {
     return this.evaluateInternal(subject, condition, true, fieldMapper as SubjectFieldMapper<unknown> | undefined)
   }
 
-  /**
-   * `canNarrowField` tracks whether a field condition (bare-key or
-   * `$field`) is still allowed to narrow at this point in the tree - `true`
-   * at the root and while only recursing through non-narrowing combinators
-   * (`$and`/`$or`/`$not`), `false` once a field condition has already
-   * narrowed once, since v1 supports only one level of field access.
-   */
   private evaluateInternal<TSubject>(
     subject: TSubject,
     condition: Condition<TSubject>,
@@ -147,14 +125,11 @@ export class ConditionResolver {
     return operator.resolve(subject, value, this.contextFor(canNarrowField, fieldMapper))
   }
 
-  /**
-   * The shared, mapper-less {@link topContext}/{@link nestedContext} cover
-   * the common case with no extra allocation; a `fieldMapper` is only ever
-   * live for one top-level `evaluate()` call, so its context is built fresh
-   * here rather than cached on the instance.
-   */
   private contextFor(canNarrowField: boolean, fieldMapper?: SubjectFieldMapper<unknown>): OperatorContext {
     if (!canNarrowField) return this.nestedContext
+    // A fieldMapper only lives for one top-level evaluate() call, so its
+    // context is built per call; the mapper-less contexts are shared to avoid
+    // allocating on the common path.
     return fieldMapper ? this.makeContext(true, fieldMapper) : this.topContext
   }
 

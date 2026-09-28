@@ -31,14 +31,12 @@ public class RealBackendDemoTest {
         archivedProject.setOrgId("org1");
         archivedProject.setArchivedAt(Instant.now());
 
-        // Create/Update/Invite all carry the same in-org condition - a bare,
-        // instance-less check can never satisfy a conditional rule.
+        // A bare, instance-less check can never satisfy a conditional rule.
         assertFalse(policy.can(AppActions.Create, AppSubjects.Project));
         assertTrue(policy.can(AppActions.Create, AppSubjects.Project.from(inOrgProject)));
         assertTrue(policy.can(AppActions.Update, AppSubjects.Project.from(inOrgProject)));
         assertFalse(policy.can(AppActions.Update, AppSubjects.Project.from(otherOrgProject)));
 
-        // Delete requires the project to be both in-org AND archived.
         assertFalse(policy.can(AppActions.Delete, AppSubjects.Project.from(inOrgProject)));
         assertTrue(policy.can(AppActions.Delete, AppSubjects.Project.from(archivedProject)));
     }
@@ -62,12 +60,11 @@ public class RealBackendDemoTest {
 
         // .from(...) is called on the catalog-registered AppSubjects.Task
         // singleton itself - it's what carries the catalog-resolvable name
-        // through wrap()/copy() (see Subject's class doc).
+        // through wrap()/copy().
         assertTrue(policy.can(AppActions.Update, AppSubjects.Task.from(ownRecentTask, projectIn("org1"))));
         assertFalse(policy.can(AppActions.Update, AppSubjects.Task.from(ownStaleTask, projectIn("org1"))));
         assertFalse(policy.can(AppActions.Update, AppSubjects.Task.from(othersTask, projectIn("org1"))));
 
-        // Members were never granted Create on Project at all.
         assertFalse(policy.can(AppActions.Create, AppSubjects.Project));
 
         assertThrows(PolicyException.class, () -> PermissionService.require(member, AppActions.Create, AppSubjects.Project));

@@ -2,11 +2,7 @@ import { PolicyTypeMismatchError } from "../../../errors/policyTypeMismatchError
 import type { AnyCondition } from "../../condition.ts"
 import { createOperator } from "../operator.ts"
 
-/**
- * `$or` - evaluates every sub-condition against the same subject,
- * whatever its value (including `null`); `{ $or: [] }` is `false` (no alternative to satisfy). A non-array operand is
- * a type mismatch.
- */
+/** `$or` - matches when any sub-condition matches the same subject, `null` included; `{ $or: [] }` is `false`. */
 export const OrOperator = createOperator<unknown, AnyCondition[]>("$or", (subject, subConditions, { resolveSubcondition }) => {
   if (!Array.isArray(subConditions)) throw new PolicyTypeMismatchError({
     value: {

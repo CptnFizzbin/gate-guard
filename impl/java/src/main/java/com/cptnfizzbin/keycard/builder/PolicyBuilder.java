@@ -22,16 +22,13 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Builds a {@link PolicyDefinition} rule by rule. {@code meta.actions}/
- * {@code meta.subjects}/{@code meta.operators} are never supplied
- * directly by default - {@link #buildDef()} fills them in automatically
- * from what {@link #allow}/{@link #deny} actually used and what {@code
- * operators} actually registered, so there's no separately hand-maintained
- * catalog to keep in sync by hand. The only meta fields a caller ever needs
- * to declare explicitly are the wildcard tokens themselves -
- * nothing about them can be inferred from usage. {@link KeycardConfig}'s
- * {@code actions}/{@code subjects} (optional) declare additional vocabulary
- * up front, folded in alongside whatever usage derives.
+ * Builds a {@link PolicyDefinition} rule by rule. {@link #buildDef()} derives
+ * {@code meta.actions}/{@code meta.subjects}/{@code meta.operators} from what
+ * {@link #allow}/{@link #deny} used and what {@code operators} registered, so
+ * there is no hand-maintained catalog to keep in sync. {@link KeycardConfig}'s
+ * {@code actions}/{@code subjects} declare additional vocabulary up front; its
+ * {@code anyAction}/{@code anySubject} declare the wildcard tokens, which
+ * can't be inferred from usage.
  */
 public class PolicyBuilder {
     private final List<PolicyDefinition.Rule> rules = new ArrayList<>();
@@ -92,13 +89,14 @@ public class PolicyBuilder {
 
     public PolicyDefinition buildDef() {
         return new PolicyDefinition()
-            .rules(this.rules)
+            // A copy, so allow()/deny() calls made after this can't reach
+            // back into an already-built definition (or a Policy made from it).
+            .rules(new ArrayList<>(this.rules))
+            // FIXME: emitMeta(false) drops anyAction/anySubject too, so a configured
+            // wildcard token silently stops matching - see #49
             .meta(config.emitMeta() ? buildMeta() : null);
     }
 
-    /**
-     * derives `actions`/`subjects`/`operators` from what was actually used/registered, plus whatever `config`'s catalogs additionally declare - see the class doc.
-     */
     private PolicyDefinition.Meta buildMeta() {
         Set<String> actions = new LinkedHashSet<>(actionsUsed);
         actions.addAll(actionResolution.names());
@@ -136,10 +134,8 @@ public class PolicyBuilder {
         String subjectName = Catalog.resolveName(subjectResolution.reverseMap(), subject.name());
 
         if (condition != null) {
-            // A rule wildcarded on both the action and the subject MUST
-            // NOT carry a Conditions element -
-            // caught here immediately, rather than waiting for eventual
-            // construction (new Policy(...)) to catch it.
+            // The spec requires the builder to reject a conditional rule
+            // wildcarded on both sides at the call site, not later in new Policy(...).
             WildcardToken anyAction = Wildcards.orDefault(config.anyAction());
             WildcardToken anySubject = Wildcards.orDefault(config.anySubject());
 

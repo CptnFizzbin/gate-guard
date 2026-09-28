@@ -8,7 +8,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 public final class OperatorCatalog extends LinkedHashMap<String, Operator> {
-    /** Every operator name this catalog registers out of the box - the single source of truth for "is this name built-in". */
+    /** The names of every built-in operator, which a new catalog registers by default. */
     public static final Set<String> BUILTIN_NAMES = DefaultOperators.NAMES;
 
     public OperatorCatalog() {
@@ -16,8 +16,10 @@ public final class OperatorCatalog extends LinkedHashMap<String, Operator> {
     }
 
     /**
-     * A name collision - built-in or custom - MUST throw immediately rather
-     * than silently overwriting the previous registration.
+     * Registers {@code operator} under its name.
+     *
+     * @throws PolicyLoadException if an operator with that name is already
+     *   registered, built-in or custom
      */
     public OperatorCatalog add(Operator operator) {
         if (this.containsKey(operator.name())) {
@@ -37,8 +39,10 @@ public final class OperatorCatalog extends LinkedHashMap<String, Operator> {
 
     /**
      * Registers a flat {@link ConditionOperator} under {@code name} and
-     * returns it - adapting it into a full {@link Operator} internally, the
-     * same way a duplicate name is rejected for either.
+     * returns it.
+     *
+     * @throws PolicyLoadException if an operator named {@code name} is already
+     *   registered, built-in or custom
      */
     public ConditionOperator set(String name, ConditionOperator operator) {
         this.add(Operator.of(name, (subject, value, ctx) -> operator.resolve(subject, value)));

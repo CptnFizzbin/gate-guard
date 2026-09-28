@@ -17,20 +17,10 @@ import type { Subject } from "../subject/index.ts"
 import type { SubjectFieldMapper } from "../subject/subjectFieldMapper.ts"
 import { KEYCARD_POLICY_SUPPORTED_VERSIONS } from "../version.ts"
 
-/**
- * `MAJOR[.MINOR[.PATCH]]`, optionally followed by SemVer pre-release/build
- * suffixes - PATCH (and MINOR) may be omitted, so `"0.1"` is valid
- * shorthand for `"0.1.0"`. Checked before handing the string to
- * `semver.coerce`, which on its own would happily pull a version out of
- * arbitrary text (`"banana 0.1 xyz"`).
- */
+// Checked before semver.coerce, which would otherwise pull a version out of
+// arbitrary text ("banana 0.1 xyz").
 const VERSION_PATTERN = /^\d+(?:\.\d+){0,2}(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/
 
-/**
- * Recursively collects every non-built-in, `$`-prefixed operator name used
- * anywhere in a Conditions tree - used to enforce `meta.operators`
- * coverage when loading a policy.
- */
 function collectCustomOperators(condition: AnyCondition | undefined, out: Set<string>): void {
   if (condition === undefined || condition === null || typeof condition !== "object") return
 
@@ -51,13 +41,7 @@ function collectCustomOperators(condition: AnyCondition | undefined, out: Set<st
   }
 }
 
-/**
- * A copy of `definition` that shares no mutable structure with it - so
- * neither the caller's object (e.g. a `PolicyBuilder` that keeps adding
- * rules) nor a `def()` result can change an already-validated `Policy`.
- * `meta.application` is opaque application data, so it's carried over by
- * reference rather than cloned.
- */
+/** Returns a deep copy of `definition`, except the opaque `meta.application`, which is kept by reference. */
 function cloneDefinition(definition: PolicyDefinition): PolicyDefinition {
   const { meta, rules, ...rest } = definition
   const clone: PolicyDefinition = { ...rest, rules: rules.map((rule) => structuredClone(rule)) }
@@ -69,7 +53,7 @@ function cloneDefinition(definition: PolicyDefinition): PolicyDefinition {
   return clone
 }
 
-/** Every entry of a declared `meta` catalog MUST be a string, and MUST be unique. */
+/** Throws a `PolicyLoadException` unless `entries` is absent or an array of unique strings. */
 function validateCatalog(entries: unknown, field: string): void {
   if (entries === undefined) return
   if (!Array.isArray(entries)) {
@@ -103,20 +87,18 @@ export class Policy<
   private readonly warnedDynamicIds = new Set<string>()
 
   /**
-   * @param definition validated, then copied - later changes to the object
-   *   passed in never affect this Policy.
-   * @param config shared, optional config also accepted by `PolicyBuilder`
-   *   (and the SubjectFieldMapper feature): `actions`/`subjects`
-   *   widen the `meta.actions`/`meta.subjects` catalogs beyond what
-   *   `definition.meta` itself declares, and double as a catalog resolving
-   *   a dynamic (no-name) Action/Subject's random name to its key, built
-   *   once here and cached (see `lib/catalog.ts`); `operators` - an
-   *   `AnyOperator[]` or an `OperatorCatalog` - is normalized once here;
-   *   `mapper` is consulted for a subject's fields whenever the `Subject`
-   *   passed to {@link can} doesn't carry its own `fieldMapper`; `logger`
-   *   receives every diagnostic this Policy emits; `emitMeta` (default
-   *   `true`) gates the eager catalog/operator validation below - see
-   *   `KeycardConfig`'s doc.
+   * @param definition copied once validated, so later changes to the object
+   *   passed in don't affect this Policy
+   * @param config shared with `PolicyBuilder` - see `KeycardConfig`
+   * @throws PolicyVersionException if `definition.version` is missing, not a
+   *   SemVer string, or not supported
+   * @throws PolicyLoadException if the definition is malformed (not an object,
+   *   `rules` not an array, a malformed rule, an invalid wildcard or `meta`
+   *   catalog), a rule is not covered by the declared catalogs, a
+   *   `meta.operators` entry has no registered operator, or two operators
+   *   share a name
+   * @throws PolicyArgumentError if `emitMeta` is true and one Action/Subject is
+   *   registered under two catalog keys, or an operator name isn't `$`-prefixed
    */
   constructor(
     definition: PolicyDefinition,
@@ -143,10 +125,8 @@ export class Policy<
   }
 
   /**
-   * Builds a Policy from an already-parsed PolicyDefinition. KeyCard itself
-   * never reads or writes policy.yaml text - an application (or a test, via
-   * a YAML library of its own choosing) parses the file into a plain
-   * PolicyDefinition object and hands it to KeyCard.
+   * Equivalent to `new Policy(definition, config)`. KeyCard never parses policy
+   * text; parse YAML/JSON into a `PolicyDefinition` yourself.
    */
   static from<
     TActions extends Action = Action,
@@ -160,10 +140,9 @@ export class Policy<
   }
 
   /**
-   * The document-level shape checks - a definition that's not an object,
-   * a missing/non-array `rules`, or a non-object `meta` is structurally
-   * invalid, and MUST surface as a {@link PolicyLoadException} rather than
-   * whatever `TypeError` the first property access would otherwise throw.
+   * Throws a `PolicyLoadException` - rather than a `TypeError` on first use -
+   * unless `definition` is an object whose `rules` is an array and whose
+   * `meta`, if present, is an object.
    */
   private static validateEnvelope(definition: unknown): asserts definition is PolicyDefinition {
     if (definition === null || typeof definition !== "object" || Array.isArray(definition)) {
@@ -198,10 +177,9 @@ export class Policy<
   }
 
   /**
-   * The `meta` catalogs' own shape: each declared catalog is an array of
-   * unique strings, and every `meta.operators` entry names a custom
-   * (`$`-prefixed, non-built-in) operator. Always run, regardless of
-   * `emitMeta` - these guard the document's validity, not diagnostics.
+   * Throws a `PolicyLoadException` unless each declared `meta` catalog is an
+   * array of unique strings and every `meta.operators` entry is a `$`-prefixed,
+   * non-built-in name.
    */
   private static validateMeta(meta: Meta | undefined): void {
     if (!meta) return
@@ -221,11 +199,9 @@ export class Policy<
   }
 
   /**
-   * when `meta.operators` is declared, every
-   * name it lists MUST already be registered on this Policy - built-in or
-   * custom - checked once here when loading a policy, regardless of
-   * whether any rule actually reaches that operator during evaluation.
-   * Only run when `emitMeta` is true - see `KeycardConfig.emitMeta`'s doc.
+   * Throws a `PolicyLoadException` if `meta.operators` lists a name that isn't
+   * registered on `resolver` (built-in or custom), whether or not any rule
+   * uses it.
    */
   private static validateOperatorsRegistered(definition: PolicyDefinition, resolver: ConditionResolver): void {
     const declared = definition.meta?.operators
@@ -235,12 +211,8 @@ export class Policy<
   }
 
   /**
-   * @param configActionNames/@param configSubjectNames resolved catalog names (see `lib/catalog.ts`) that, when given, widen the `meta.actions`/`meta.subjects` catalogs below beyond what `definition.meta` declares.
-   * @param emitMeta when false, skips only the catalog-coverage checks
-   *   below (a rule action/subject/operator not covered by
-   *   `meta.actions`/`meta.subjects`/`meta.operators`) - the structural
-   *   checks (malformed rule tuples, both-sides-wildcarded rules with conditions) always run regardless, since
-   *   those guard evaluation correctness rather than diagnostics.
+   * @param emitMeta when false, only the catalog-coverage checks are skipped;
+   *   the structural checks always run, since evaluation depends on them
    */
   private validateRules(
     configActionNames: string[],
@@ -317,15 +289,17 @@ export class Policy<
     }
   }
 
-  /**
-   * The definition this Policy was constructed from, preserving its own
-   * `version`. Returns a fresh copy on every call, so mutating the result
-   * never affects this Policy.
-   */
+  /** Returns a copy of the definition this Policy was constructed from, including its own `version`. */
   def(): PolicyDefinition {
     return cloneDefinition(this.definition)
   }
 
+  /**
+   * Returns whether `action` is allowed on `subject`: the last-declared rule
+   * whose action, subject, and conditions all match decides, and no match
+   * means deny. There is no "allow AND NOT deny" veto. A bare subject (no
+   * `.wrap()`) never matches a conditional rule.
+   */
   can(action: TActions, subject: TSubjects): boolean {
     return this.checkPermission(action, subject)
   }
@@ -342,15 +316,6 @@ export class Policy<
     }
   }
 
-  /**
-   * Reverse scan over `rules`, returning the effect of
-   * the first (i.e. most-recently-declared) rule whose action, subject,
-   * and (if present) conditions all match. There is no independent
-   * "allow AND NOT deny" veto and no combination of multiple matching
-   * rules: exactly one rule decides the outcome, or none does and the
-   * result is default deny. The incoming action/subject names are resolved
-   * once per check, not once per rule.
-   */
   private checkPermission(action: TActions, subject: TSubjects): boolean {
     this.warnIfUnregisteredDynamic(action, this.actionCatalog, "Action", "createAction")
     this.warnIfUnregisteredDynamic(subject, this.subjectCatalog, "Subject", "createSubject")
@@ -367,8 +332,8 @@ export class Policy<
       if (ruleSubject !== subjectName && ruleSubject !== anySubject) continue
 
       if (ruleConditions) {
-        // A conditional rule can never be satisfied by a bare-type/no-instance
-        // check - there's no instance data for the condition to inspect.
+        // A bare check has no instance for the conditions to inspect; without
+        // this guard, a condition such as { x: { $ne: 1 } } would match it.
         if (subject.instance === undefined) continue
         if (!this.resolver.evaluate(subject.instance, ruleConditions, this.resolveFieldMapper(subject))) continue
       }
@@ -376,28 +341,22 @@ export class Policy<
       return effect === "allow"
     }
 
-    return false // Default deny.
+    return false
   }
 
-  /** The subject's own `fieldMapper` (set via `createSubject`) takes precedence; `config.mapper`, keyed by the subject's resolved catalog name, is the fallback. */
   private resolveFieldMapper(subject: TSubjects): SubjectFieldMapper<unknown> | undefined {
     if (subject.fieldMapper) return subject.fieldMapper as SubjectFieldMapper<unknown>
     return this.config.mapper?.get(resolveName(this.subjectCatalog, subject.name))
   }
 
-  /**
-   * A dynamic (no-name) Action/Subject never registered in any catalog
-   * reachable from this Policy can't resolve to a real name - it falls
-   * through to default-deny like any other non-match (unless a wildcard
-   * rule catches it), but that's silent otherwise, so warn once per
-   * distinct id rather than once per `.can()`/`.cannot()`/`.require()` call.
-   */
   private warnIfUnregisteredDynamic(
     value: { name: string, __dynamic?: true },
     reverseMap: Map<string, string>,
     kind: string,
     factory: string,
   ): void {
+    // An unregistered dynamic value can never match a non-wildcard rule, and
+    // would otherwise fall through to default deny silently.
     if (!value.__dynamic || reverseMap.has(value.name) || this.warnedDynamicIds.has(value.name)) return
     this.warnedDynamicIds.add(value.name)
     ;(this.config.logger ?? getLogger()).warn(

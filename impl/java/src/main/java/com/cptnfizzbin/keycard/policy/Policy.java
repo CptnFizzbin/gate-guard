@@ -29,6 +29,13 @@ public final class Policy {
     private final Map<String, String> actionReverseMap;
     private final Map<String, String> subjectReverseMap;
 
+    // Snapshotted at construction, so evaluation only ever sees the rules and
+    // wildcard tokens that were validated here - later mutation of the
+    // (mutable) PolicyDefinition can't bypass validation.
+    private final List<PolicyDefinition.Rule> rules;
+    private final WildcardToken anyAction;
+    private final WildcardToken anySubject;
+
     public Policy(PolicyDefinition definition) {
         this(definition, new KeycardConfig());
     }
@@ -44,14 +51,25 @@ public final class Policy {
         this.actionReverseMap = actions.reverseMap();
         this.subjectReverseMap = subjects.reverseMap();
 
+        this.rules = definition.getRules();
+        this.anyAction = Wildcards.effectiveAnyAction(definition.meta());
+        this.anySubject = Wildcards.effectiveAnySubject(definition.meta());
+
+        // Structural validity is what evaluation itself relies on, so it's
+        // checked regardless of emitMeta - only the catalog checks are gated.
+        validateRuleShapes(rules, anyAction, anySubject);
         if (config.emitMeta()) {
             validateOperatorsRegistered(definition, resolver);
-            validateRules(definition, actions.names(), subjects.names());
+            validateRuleCatalogs(definition, rules, anyAction, anySubject, actions.names(), subjects.names());
         }
     }
 
     /**
-     * A bare-type check (no instance): a conditional rule can never match this.
+     * Returns whether {@code action} is allowed on {@code subject}: the
+     * last-declared rule whose action, subject, and conditions all match
+     * decides, and no match means deny. There is no "allow AND NOT deny" veto.
+     * A subject without claims (a bare type check) never matches a conditional
+     * rule.
      */
     public boolean can(Action action, Subject<?, ?> subject) {
         return checkPermission(action, subject);
@@ -69,20 +87,7 @@ public final class Policy {
         }
     }
 
-    /**
-     * Reverse scan over `rules`, returning the effect of
-     * the first (i.e. most-recently-declared) rule whose action, subject,
-     * and (if present) conditions all match. There is no independent
-     * "allow AND NOT deny" veto and no combination of multiple matching
-     * rules: exactly one rule decides the outcome, or none does and the
-     * result is default deny.
-     */
     private boolean checkPermission(Action action, Subject<?, ?> subject) {
-        PolicyDefinition.Meta meta = definition.meta();
-        WildcardToken anyAction = Wildcards.effectiveAnyAction(meta);
-        WildcardToken anySubject = Wildcards.effectiveAnySubject(meta);
-        List<PolicyDefinition.Rule> rules = definition.getRules();
-
         String actionName = Catalog.resolveName(actionReverseMap, action.name());
         String subjectName = Catalog.resolveName(subjectReverseMap, subject.name());
 
@@ -94,11 +99,10 @@ public final class Policy {
 
             Map<String, Object> conditions = rule.conditions();
             if (conditions != null) {
-                // A conditional rule can never be satisfied by a bare-type/no-instance
-                // check - there's no instance data for the condition to inspect.
+                // A bare check has no claims for the conditions to inspect; without
+                // this guard, a condition such as { x: { $ne: 1 } } would match it.
                 if (subject.claims().isEmpty()) continue;
                 if (!resolver.evaluate(subject.claims().get(), conditions)) continue;
-                return "allow".equals(rule.effect());
             }
 
             return "allow".equals(rule.effect());
@@ -120,10 +124,9 @@ public final class Policy {
     }
 
     /**
-     * when `meta.operators` is declared, every
-     * name it lists MUST already be registered on this Policy - built-in or
-     * custom - checked once here when loading a policy, regardless of
-     * whether any rule actually reaches that operator during evaluation.
+     * Throws a {@link PolicyLoadException} if {@code meta.operators} lists a
+     * name that isn't registered on {@code resolver} (built-in or custom),
+     * whether or not any rule uses it.
      */
     private static void validateOperatorsRegistered(PolicyDefinition definition, ConditionResolver resolver) {
         PolicyDefinition.Meta meta = definition.meta();
@@ -133,14 +136,46 @@ public final class Policy {
         resolver.assertAllRegistered(declared);
     }
 
+    private static void validateRuleShapes(List<PolicyDefinition.Rule> rules, WildcardToken anyAction, WildcardToken anySubject) {
+        for (PolicyDefinition.Rule rule : rules) {
+            if (!"allow".equals(rule.effect()) && !"deny".equals(rule.effect())) {
+                throw new PolicyLoadException(
+                    "Malformed rule tuple: effect must be \"allow\" or \"deny\", got " + rule.effect() + "."
+                );
+            }
+            if (rule.action() == null) {
+                throw new PolicyLoadException("Malformed rule tuple: action must be a string, got null.");
+            }
+            if (rule.subjectName() == null) {
+                throw new PolicyLoadException("Malformed rule tuple: subject must be a string, got null.");
+            }
+
+            if (isWildcard(anyAction, rule.action()) && isWildcard(anySubject, rule.subjectName()) && rule.conditions() != null) {
+                throw new PolicyLoadException(
+                    "Rule [" + rule.effect() + ", " + rule.action() + ", " + rule.subjectName()
+                        + "] is wildcarded on both the action and the subject but carries a Conditions element - this MUST be unconditional."
+                );
+            }
+        }
+    }
+
+    private static boolean isWildcard(WildcardToken any, String value) {
+        return any instanceof WildcardToken.Named named && value.equals(named.token());
+    }
+
     /**
-     * @param configActionNames resolved catalog names (see {@code lib.Catalog}) that, when given, widen the `meta.actions` catalog below beyond what `definition.meta` declares.
-     * @param configSubjectNames resolved catalog names (see {@code lib.Catalog}) that, when given, widen the `meta.subjects` catalog below beyond what `definition.meta` declares.
+     * @param configActionNames action names that widen {@code meta.actions} beyond what {@code definition.meta} declares
+     * @param configSubjectNames subject names that widen {@code meta.subjects} beyond what {@code definition.meta} declares
      */
-    private static void validateRules(PolicyDefinition definition, List<String> configActionNames, List<String> configSubjectNames) {
+    private static void validateRuleCatalogs(
+        PolicyDefinition definition,
+        List<PolicyDefinition.Rule> rules,
+        WildcardToken anyAction,
+        WildcardToken anySubject,
+        List<String> configActionNames,
+        List<String> configSubjectNames
+    ) {
         PolicyDefinition.Meta meta = definition.meta();
-        WildcardToken anyAction = Wildcards.effectiveAnyAction(meta);
-        WildcardToken anySubject = Wildcards.effectiveAnySubject(meta);
 
         List<String> metaActions = meta != null ? meta.actions() : null;
         List<String> metaSubjects = meta != null ? meta.subjects() : null;
@@ -162,28 +197,9 @@ public final class Policy {
 
         Set<String> operatorsCatalog = metaOperators != null ? new LinkedHashSet<>(metaOperators) : null;
 
-        for (PolicyDefinition.Rule rule : definition.getRules()) {
-            if (!"allow".equals(rule.effect()) && !"deny".equals(rule.effect())) {
-                throw new PolicyLoadException(
-                    "Malformed rule tuple: effect must be \"allow\" or \"deny\", got " + rule.effect() + "."
-                );
-            }
-            if (rule.action() == null) {
-                throw new PolicyLoadException("Malformed rule tuple: action must be a string, got null.");
-            }
-            if (rule.subjectName() == null) {
-                throw new PolicyLoadException("Malformed rule tuple: subject must be a string, got null.");
-            }
-
-            boolean isWildcardAction = anyAction instanceof WildcardToken.Named named && rule.action().equals(named.token());
-            boolean isWildcardSubject = anySubject instanceof WildcardToken.Named named && rule.subjectName().equals(named.token());
-
-            if (isWildcardAction && isWildcardSubject && rule.conditions() != null) {
-                throw new PolicyLoadException(
-                    "Rule [" + rule.effect() + ", " + rule.action() + ", " + rule.subjectName()
-                        + "] is wildcarded on both the action and the subject but carries a Conditions element - this MUST be unconditional."
-                );
-            }
+        for (PolicyDefinition.Rule rule : rules) {
+            boolean isWildcardAction = isWildcard(anyAction, rule.action());
+            boolean isWildcardSubject = isWildcard(anySubject, rule.subjectName());
 
             if (actionsCatalog != null && !isWildcardAction && !actionsCatalog.contains(rule.action())) {
                 throw new PolicyLoadException("Rule action \"" + rule.action() + "\" is not covered by meta.actions.");
@@ -204,11 +220,6 @@ public final class Policy {
         }
     }
 
-    /**
-     * Recursively collects every non-built-in, `$`-prefixed operator name
-     * used anywhere in a Conditions tree - used to enforce `meta.operators`
-     * coverage when loading a policy.
-     */
     private static void collectCustomOperators(Object condition, Set<String> out) {
         if (!(condition instanceof Map<?, ?> map)) return;
 

@@ -5,12 +5,10 @@ import com.cptnfizzbin.keycard.errors.PolicyArgumentException;
 import java.util.LinkedHashMap;
 
 /**
- * A plain {@code name -> Subject} catalog - both a self-keyed vocabulary
- * declaration ({@link #add(Subject)}, keyed by the Subject's own name) and
- * an explicitly-keyed catalog ({@link #add(String, Subject)}, required for
- * a dynamic Subject) share this one map. {@code PolicyBuilder}/{@code
- * Policy} resolve it into the actual {@code id -> catalog key} reverse
- * lookup once, at construction, via {@code lib.Catalog}.
+ * A {@code key -> Subject} catalog. Each key is the name its Subject
+ * serializes as: {@link #add(Subject)} keys a Subject by its own name, and
+ * {@link #add(String, Subject)} gives an explicit key, which a dynamic Subject
+ * requires.
  */
 public final class SubjectCatalog extends LinkedHashMap<String, Subject<?, ?>> {
     public SubjectCatalog add(String name, Subject<?, ?> subject) {
@@ -20,7 +18,7 @@ public final class SubjectCatalog extends LinkedHashMap<String, Subject<?, ?>> {
 
     public SubjectCatalog add(Subject<?, ?> subject) {
         if (subject.dynamic())
-            throw new PolicyArgumentException("Dynamic subject must added to the catalog with a name");
+            throw new PolicyArgumentException("Dynamic subject must be added to the catalog with a name");
         return this.add(subject.name(), subject);
     }
 
@@ -36,9 +34,9 @@ public final class SubjectCatalog extends LinkedHashMap<String, Subject<?, ?>> {
     }
 
     /**
-     * Registers {@code subject} under its own name and returns {@code
-     * subject} itself - the single-arg counterpart of {@link #set(String, Subject)}
-     * for a non-dynamic Subject that already carries its own name.
+     * Registers {@code subject} under its own name and returns it.
+     *
+     * @throws PolicyArgumentException if {@code subject} is dynamic
      */
     public <S extends Subject<?, ?>> S set(S subject) {
         if (subject.dynamic())

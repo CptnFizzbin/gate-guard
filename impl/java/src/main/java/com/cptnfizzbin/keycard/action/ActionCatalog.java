@@ -5,17 +5,15 @@ import com.cptnfizzbin.keycard.errors.PolicyArgumentException;
 import java.util.LinkedHashMap;
 
 /**
- * A plain {@code name -> Action} catalog - both a self-keyed vocabulary
- * declaration ({@link #add(Action)}, keyed by the Action's own name) and an
- * explicitly-keyed catalog ({@link #add(String, Action)}, required for a
- * dynamic Action) share this one map. {@code PolicyBuilder}/{@code Policy}
- * resolve it into the actual {@code id -> catalog key} reverse lookup once,
- * at construction, via {@code lib.Catalog}.
+ * A {@code key -> Action} catalog. Each key is the name its Action serializes
+ * as: {@link #add(Action)} keys an Action by its own name, and
+ * {@link #add(String, Action)} gives an explicit key, which a dynamic Action
+ * requires.
  */
 public final class ActionCatalog extends LinkedHashMap<String, Action> {
     public ActionCatalog add(Action action) {
         if (action.dynamic())
-            throw new PolicyArgumentException("Dynamic actions must added to the catalog with a name");
+            throw new PolicyArgumentException("Dynamic actions must be added to the catalog with a name");
         return this.add(action.name(), action);
     }
 
@@ -35,9 +33,9 @@ public final class ActionCatalog extends LinkedHashMap<String, Action> {
     }
 
     /**
-     * Registers {@code action} under its own name and returns {@code
-     * action} itself - the single-arg counterpart of {@link #set(String, Action)}
-     * for a non-dynamic Action that already carries its own name.
+     * Registers {@code action} under its own name and returns it.
+     *
+     * @throws PolicyArgumentException if {@code action} is dynamic
      */
     public Action set(Action action) {
         if (action.dynamic())

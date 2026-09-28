@@ -1,8 +1,4 @@
-/**
- * Base class for every error KeyCard throws - catch this to handle any
- * KeyCard failure (load, version, argument, type mismatch, or a failed
- * `require()`) in one place.
- */
+/** Base class of every error KeyCard throws; also thrown directly by `Policy.require()` when the check is denied. */
 export class PolicyError extends Error {
   constructor(message: string) {
     super(message)
