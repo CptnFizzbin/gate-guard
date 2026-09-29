@@ -1,11 +1,12 @@
 import { describe, expect, test, vi } from "vitest"
 
-import type { OperatorContext } from "../operator.ts"
 import { SubstrOperator } from "./substrOperator.ts"
+import { ConditionResolver } from "../../conditionResolver.ts"
+import type { OperatorContext } from "../operator.ts"
 
 describe("$substr", () => {
   const $substr = SubstrOperator
-  const ctx: OperatorContext = { resolveSubcondition: vi.fn(), resolveFieldSubcondition: vi.fn(), canNarrowField: vi.fn() }
+  const ctx: OperatorContext = { resolveSubcondition: vi.fn(), resolveFieldSubcondition: vi.fn(), canNarrowField: vi.fn(), logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }
 
   describe("literal matching", () => {
     test.each([
@@ -134,5 +135,21 @@ describe("$substr", () => {
     ])("pattern '$pattern' matches '$subject': $match", ({ pattern, subject, match }) => {
       expect($substr.resolve(subject, pattern, ctx)).toBe(match)
     })
+  })
+})
+
+describe("$substr pattern cache", () => {
+  const resolver = new ConditionResolver()
+
+  test("a cached pattern gives the same answer on every call, for different subjects", () => {
+    for (let i = 0; i < 3; i++) {
+      expect(resolver.evaluate("hello world", { $substr: "^hello*world$" })).toBe(true)
+      expect(resolver.evaluate("hello there", { $substr: "^hello*world$" })).toBe(false)
+    }
+  })
+
+  test("a malformed pattern keeps evaluating to false, not just the first time", () => {
+    expect(resolver.evaluate("a^b", { $substr: "a^b" })).toBe(false)
+    expect(resolver.evaluate("a^b", { $substr: "a^b" })).toBe(false)
   })
 })

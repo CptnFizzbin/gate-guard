@@ -5,11 +5,11 @@ on:
     branches: [ main ]
     paths:
       - "impl/java/**"
-      - "test/fixtures/v1/**"
+      - "test/fixtures/v0/**"
   pull_request:
     paths:
       - "impl/java/**"
-      - "test/fixtures/v1/**"
+      - "test/fixtures/v0/**"
 
 defaults:
   run:

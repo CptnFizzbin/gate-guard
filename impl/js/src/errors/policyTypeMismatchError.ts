@@ -5,6 +5,12 @@ export interface TypeMismatchInfo {
   received: string
 }
 
+/**
+ * Signals that a condition can't be evaluated against the value in hand (a
+ * type mismatch or malformed operand). Thrown from an operator built with
+ * `createOperator`, it's logged as a warning and the condition evaluates to
+ * `false` instead of propagating.
+ */
 export class PolicyTypeMismatchError extends PolicyError {
   constructor(
     options:
@@ -18,5 +24,6 @@ export class PolicyTypeMismatchError extends PolicyError {
       const { expected, received } = options.value
       super(`Expected value to be of type '${expected}', received '${received}' instead`)
     }
+    this.name = "PolicyTypeMismatchError"
   }
 }

@@ -170,10 +170,11 @@ describe("Policy: construction-time validation", () => {
     ).toThrow(PolicyLoadException)
   })
 
-  test("meta.operators is satisfied by a builtin name", () => {
+  // Spec: https://keycard.cptnfizzbin.dev/spec/v0#metaoperators
+  test("meta.operators MUST NOT name a built-in operator", () => {
     expect(() =>
       Policy.from({ version: "0.1", meta: { operators: ["$eq"] }, rules: [] }),
-    ).not.toThrow()
+    ).toThrow(PolicyLoadException)
   })
 
   test("meta.operators is satisfied by a registered custom operator", () => {

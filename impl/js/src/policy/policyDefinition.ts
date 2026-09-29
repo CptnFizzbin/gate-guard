@@ -16,12 +16,12 @@ export type RuleTuple =
 export interface Meta {
   /**
    * The action wildcard token. Absent -> defaults to
-   * `"_ANY_"`. Explicit `null` -> disables the action wildcard entirely
+   * `"_ANY_"`. Explicit `null` or `false` -> disables the action wildcard entirely
    * (no string, including `"_ANY_"`, has special meaning).
    */
-  anyAction?: string | null
+  anyAction?: string | false | null
   /** The subject wildcard token, symmetric with `anyAction` in every respect. */
-  anySubject?: string | null
+  anySubject?: string | false | null
   /** Declared action vocabulary; when present, enforced at construction. */
   actions?: string[]
   /** Declared subject vocabulary; when present, enforced at construction. */

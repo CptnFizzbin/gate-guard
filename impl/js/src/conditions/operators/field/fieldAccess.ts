@@ -3,8 +3,23 @@ import type { SubjectFieldMapper } from "../../../subject/subjectFieldMapper.ts"
 import type { AnyCondition, Condition } from "../../condition.ts"
 import type { OperatorContext } from "../operator.ts"
 
+/**
+ * Returns `true` when `subject` is an object carrying `fieldName`, either as
+ * its own property or declared by a class in its prototype chain. Members it
+ * only inherits from `Object.prototype` (`toString`, `__proto__`, ...), and
+ * `constructor`, don't count as fields.
+ */
 export function hasField(subject: unknown, fieldName: string): subject is Record<string, unknown> {
-  return subject !== null && typeof subject === "object" && fieldName in subject
+  if (subject === null || typeof subject !== "object") return false
+
+  if (Object.hasOwn(subject, fieldName)) return true
+  // Every prototype carries a `constructor` - it's never a declared field.
+  if (fieldName === "constructor") return false
+
+  for (let proto = Object.getPrototypeOf(subject); proto !== null; proto = Object.getPrototypeOf(proto)) {
+    if (Object.hasOwn(proto, fieldName)) return proto !== Object.prototype
+  }
+  return false
 }
 
 /** Returns `true` when `condition` is exactly `{ $ne: ... }`; a `$ne` alongside other keys, or nested deeper, doesn't count. */
@@ -54,7 +69,7 @@ export function checkField<TSubject>(subject: TSubject, fieldName: string, condi
     })
   }
 
-  if (hasFieldMapper(ctx) && fieldName in ctx.fieldMapper) {
+  if (hasFieldMapper(ctx) && Object.hasOwn(ctx.fieldMapper, fieldName)) {
     return ctx.resolveFieldSubcondition(ctx.fieldMapper[fieldName](subject), condition)
   }
 

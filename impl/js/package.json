@@ -28,7 +28,8 @@
     "prepack": "yarn build",
     "build": "tsdown",
     "test": "vitest",
-    "lint": "eslint src --ext .ts"
+    "lint": "eslint src tests examples *.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "semver": "^7.8.5"

@@ -1,9 +1,5 @@
-import { createAction, createSubject, Policy, PolicyBuilder } from "./index.ts"
-import { getLogger } from "./lib/logger.ts"
-
-import type { InferActions, InferSubjects, KeycardConfig } from "./index"
-
-const logger = getLogger()
+import type { InferActions, InferSubjects, KeycardConfig } from "../src/index.ts"
+import { createAction, createSubject, Policy, PolicyBuilder } from "../src/index.ts"
 
 const Actions = {
   create: createAction("create"),
@@ -42,17 +38,17 @@ const ownArticle = Subjects.article.wrap({ id: 1, ownerId: 5 })
 const othersArticle = Subjects.article.wrap({ id: 2, ownerId: 6 })
 
 if (policy.can(Actions.create, Subjects.article)) {
-  logger.info("✓ Can create articles")
+  console.log("✓ Can create articles")
 }
 
 if (policy.can(Actions.update, ownArticle)) {
-  logger.info("✓ Can update own article")
+  console.log("✓ Can update own article")
 }
 
 if (policy.can(Actions.update, othersArticle)) {
-  logger.info("✓ Can update others' article")
+  console.log("✓ Can update others' article")
 } else {
-  logger.info("✗ Cannot update others' article")
+  console.log("✗ Cannot update others' article")
 }
 
 // PolicyDefinitions are plain JSON - a policy built once can be serialized,
@@ -61,4 +57,4 @@ const json = JSON.stringify(policy.def())
 const def = JSON.parse(json)
 const restoredPolicy = new Policy<AppActions, AppSubjects>(def, config)
 
-logger.info(`Restored policy agrees: ${restoredPolicy.can(Actions.update, ownArticle)}`)
+console.log(`Restored policy agrees: ${restoredPolicy.can(Actions.update, ownArticle)}`)
