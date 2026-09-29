@@ -14,4 +14,14 @@ export { PolicyBuilder } from "./builder/index.ts"
 
 export type { KeycardConfig } from "./keycardConfig.ts"
 
-export { PolicyError, PolicyLoadException, PolicyVersionException, PolicyArgumentError } from "./errors/index.ts"
+export type { Logger } from "./lib/logger.ts"
+export { setLogger } from "./lib/logger.ts"
+
+export type { TypeMismatchInfo } from "./errors/index.ts"
+export {
+  PolicyError,
+  PolicyLoadException,
+  PolicyVersionException,
+  PolicyArgumentError,
+  PolicyTypeMismatchError,
+} from "./errors/index.ts"

@@ -68,7 +68,17 @@ config?)`. `config` is an optional `KeycardConfig` (see below), shared with
 - `can(action, subject)` — check if action is allowed
 - `cannot(action, subject)` — check if action is denied
 - `require(action, subject)` — throw if not allowed (`PolicyError`)
-- `def()` — get the underlying definition
+- `def()` — get the underlying definition, with its own `version`. Returns a
+  fresh copy each call; the `Policy` also copies the definition it's
+  constructed from, so neither the caller's object nor a `def()` result can
+  change an already-validated `Policy`.
+
+Construction throws a `PolicyLoadException` for a structurally invalid
+definition (missing or non-array `rules`, a malformed rule tuple, a
+non-string/`null`/`false` wildcard, a duplicate catalog entry, a
+`meta.operators` entry naming a built-in, ...), and a
+`PolicyVersionException` for a missing, non-SemVer, or unsupported
+`version`.
 
 ## Condition operators
 
@@ -113,8 +123,12 @@ const policy = new Policy(policyDef, config);
   built via `createOperator` or given as a bare `{ $name: resolver }` map
   (no `createOperator` call needed).
 - `anyAction` / `anySubject` — the wildcard tokens: a bare token string, an
-  `Action`/`Subject` (its `.name` is used), or `null` to disable that
+  `Action`/`Subject` (its `.name` is used), or `null`/`false` to disable that
   wildcard position entirely; omitted means the `"_ANY_"` default applies.
+- `logger` — receives every non-fatal diagnostic the `Policy` emits (a
+  condition type mismatch or malformed condition, an unregistered dynamic
+  Action/Subject). Falls back to the module-level logger set via
+  `setLogger()`.
 - `mapper` — a `SubjectFieldMapperCatalog`, consulted as a fallback for any
   subject that doesn't carry its own field mapper.
 - `emitMeta` (default `true`) — gates the eager catalog/operator
@@ -182,6 +196,26 @@ const policy = new Policy(policyDef, {mapper: catalog});
 - `new SubjectFieldMapperCatalog(entries?: Record<string, SubjectFieldMapper>)`
 - `.register(subjectName, mapper)` — register one more mapper
 - `.get(subjectName)` — look up a registered mapper, or `undefined`
+
+## Errors and diagnostics
+
+Every error KeyCard throws extends `PolicyError`, so one
+`instanceof PolicyError` check catches them all:
+
+- `PolicyLoadException` — a structurally invalid `PolicyDefinition`.
+- `PolicyVersionException` — a missing, malformed, or unsupported `version`.
+- `PolicyArgumentError` — invalid builder/config input (a both-sides-wildcarded
+  conditional rule, an unregistered dynamic Action/Subject, an operator name
+  without a `$` prefix, ...).
+- `PolicyTypeMismatchError` — a condition that can't be evaluated against the
+  value in hand. Never escapes a check: thrown from an operator's resolver
+  (built-in or custom), it's logged as a warning and the condition evaluates
+  to `false`. Throw it from a custom operator to get the same behavior.
+- `PolicyError` itself — thrown by `require()` when the check is denied.
+
+`setLogger(logger)` sets the module-level `Logger` (`{ info, warn, error }`)
+used whenever a `Policy` has no `KeycardConfig.logger` of its own; messages
+sent through it are prefixed with `[KeyCard]`. By default nothing is logged.
 
 ## See also
 

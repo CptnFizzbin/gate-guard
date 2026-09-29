@@ -14,7 +14,7 @@ export type LogicCondition<TSubject, TCustom> =
 export type ValueCondition<TSubject, TCustom> =
   TSubject extends unknown[] ? ArrayCondition<TSubject> // must be first, as arrays are objects
     : TSubject extends object ? ObjectCondition<TSubject, TCustom>
-      : TSubject extends PrimativeValue ? PrimativeConditon<TSubject>
+      : TSubject extends PrimitiveValue ? PrimitiveCondition<TSubject>
         : never
 
 export type ArrayCondition<TSubject extends unknown[]> =
@@ -48,14 +48,14 @@ export type FieldLogicCondition<TSubject, TCustom> =
 
 export type FieldLeafCondition<TSubject> =
   TSubject extends unknown[] ? ArrayCondition<TSubject>
-    : TSubject extends PrimativeValue ? PrimativeConditon<TSubject>
+    : TSubject extends PrimitiveValue ? PrimitiveCondition<TSubject>
       // an object-typed field value can no longer narrow further, but
       // equality against the whole value is still meaningful
       : { $eq: TSubject } | { $ne: TSubject }
 
-export type PrimativeValue = number | string | boolean | null | undefined
+export type PrimitiveValue = number | string | boolean | null | undefined
 
-export type PrimativeConditon<TSubject extends PrimativeValue> =
+export type PrimitiveCondition<TSubject extends PrimitiveValue> =
   | { $eq: TSubject }
   | { $ne: TSubject }
   | { $in: TSubject[] }

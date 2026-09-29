@@ -1,4 +1,4 @@
-import type { Action } from "./action"
+import type { Action } from "./action.ts"
 
 /**
  * Infers the union of `Action` types expected by `PolicyBuilder`/`Policy`

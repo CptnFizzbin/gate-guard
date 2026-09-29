@@ -5,15 +5,17 @@ on:
     branches: [ main ]
     paths:
       - "impl/js/**"
-      - "test/fixtures/v1/**"
+      - "test/fixtures/v0/**"
       - "package.json"
+      - "eslint.config.ts"
       - "yarn.lock"
       - ".yarnrc.yml"
   pull_request:
     paths:
       - "impl/js/**"
-      - "test/fixtures/v1/**"
+      - "test/fixtures/v0/**"
       - "package.json"
+      - "eslint.config.ts"
       - "yarn.lock"
       - ".yarnrc.yml"
 
@@ -36,6 +38,12 @@ jobs:
 
       - name: Install dependencies
         run: yarn install --immutable
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Typecheck
+        run: yarn typecheck
 
       - name: Build
         run: yarn build

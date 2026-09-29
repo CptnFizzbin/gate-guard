@@ -38,9 +38,7 @@ function discoverFixtureFiles(): FixtureFile[] {
 
 function loadSuites(filePath: string): V0Suite[] {
   const raw = fs.readFileSync(filePath, "utf-8")
-  const documents = YAML.parseAllDocuments(raw).map((doc) => doc.toJSON())
-  if (Array.isArray(documents)) return documents
-  return [documents]
+  return YAML.parseAllDocuments(raw).map((doc) => doc.toJSON())
 }
 
 const fixtureFiles = discoverFixtureFiles()

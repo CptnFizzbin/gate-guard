@@ -2,22 +2,23 @@ import type { Action } from "../action/index.ts"
 import type { AnyCondition } from "../conditions/condition.ts"
 import type { Condition } from "../conditions/index.ts"
 import type { AnyOperator, InferCondition } from "../conditions/operators/operator.ts"
-import { normalizeOperators } from "../conditions/operators/operator.ts"
+import { assertOperatorName, normalizeOperators } from "../conditions/operators/operator.ts"
 import { PolicyArgumentError } from "../errors/index.ts"
 import type { KeycardConfig } from "../keycardConfig.ts"
 import { buildCatalog, resolveName } from "../lib/catalog.ts"
-import { DEFAULT_WILDCARD } from "../lib/wildcard.ts"
 import { Policy } from "../policy/policy.ts"
 import type { Effect, Meta, PolicyDefinition, RuleTuple } from "../policy/policyDefinition.ts"
-import { DISABLED, effectiveAnyAction, effectiveAnySubject } from "../policy/wildcards.ts"
+import { DEFAULT_WILDCARD, DISABLED, effectiveAnyAction, effectiveAnySubject } from "../policy/wildcards.ts"
 import type { Subject } from "../subject/index.ts"
 import { KEYCARD_POLICY_VERSION } from "../version.ts"
 
 export const BUILDER_VERSION = KEYCARD_POLICY_VERSION
 
-/** Returns the serialized wildcard token for `value`: `null` disables the wildcard; `undefined` selects the default. */
-function wildcardNameOf(value: Action | Subject | string | undefined | null, reverseMap: Map<string, string>): string | null {
-  if (value === null) return null
+function wildcardNameOf(
+  value: Action | Subject | string | false | undefined | null,
+  reverseMap: Map<string, string>,
+): string | false | null {
+  if (value === null || value === false) return value
   if (typeof value === "undefined") return DEFAULT_WILDCARD
   if (typeof value === "string") return value
   return resolveName(reverseMap, value.name)
@@ -36,9 +37,9 @@ export class PolicyBuilder<
   TSubjects extends Subject = Subject,
   TOperators extends AnyOperator = never,
 > {
-  private rules: RuleTuple[] = []
-  private readonly anyAction: string | null
-  private readonly anySubject: string | null
+  private readonly rules: RuleTuple[] = []
+  private readonly anyAction: string | false | null
+  private readonly anySubject: string | false | null
   private readonly operators: AnyOperator[]
   private readonly actionsUsed = new Set<string>()
   private readonly subjectsUsed = new Set<string>()
@@ -68,6 +69,7 @@ export class PolicyBuilder<
     this.anySubject = wildcardNameOf(config.anySubject, this.subjectCatalog)
     this.config = config
     this.operators = normalizeOperators(config.operators)
+    this.operators.forEach((op) => assertOperatorName(op.name))
   }
 
   allow<TAction extends TActions, TSubject extends TSubjects>(
@@ -119,9 +121,9 @@ export class PolicyBuilder<
     const def: PolicyDefinition = {
       version: BUILDER_VERSION,
       meta: {}, // Reserves meta's position ahead of rules, so serialized JSON lists it first
-      // FIXME: shares the builder's live array, so later allow()/deny() calls
-      // mutate an already-built definition - see #50
-      rules: this.rules,
+      // A copy, so later allow()/deny() calls can't change an already-built
+      // definition or a Policy built from it (#50).
+      rules: this.rules.map((rule) => structuredClone(rule)),
     }
 
     if (options.includeMeta ?? true) {

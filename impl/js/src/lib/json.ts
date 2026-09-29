@@ -3,7 +3,6 @@ export type JsonValue =
   | number
   | boolean
   | null
-  | undefined
   | JsonArray
   | JsonObject
 

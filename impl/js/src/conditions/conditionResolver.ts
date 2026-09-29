@@ -1,8 +1,10 @@
 import type { Condition } from "./condition.ts"
 import type { AnyOperator, OperatorContext } from "./operators/operator.ts"
+import { assertOperatorName } from "./operators/operator.ts"
 import { PolicyLoadException } from "../errors/index.ts"
 import { PolicyTypeMismatchError } from "../errors/policyTypeMismatchError.ts"
 import type { JsonValue } from "../lib/json.ts"
+import type { Logger } from "../lib/logger.ts"
 import { getLogger } from "../lib/logger.ts"
 import type { SubjectFieldMapper } from "../subject/subjectFieldMapper.ts"
 import { DefaultOperators } from "./operators/defaultOperators.ts"
@@ -16,21 +18,29 @@ export const BUILTIN_OPERATOR_NAMES: ReadonlySet<string> = new Set(DefaultOperat
  * plus any custom operators it was constructed with.
  */
 export class ConditionResolver {
-  private operatorRegistry = new Map<string, AnyOperator>()
+  private readonly operatorRegistry = new Map<string, AnyOperator>()
+  private readonly explicitLogger: Logger | undefined
   private readonly topContext: OperatorContext = this.makeContext(true)
   private readonly nestedContext: OperatorContext = this.makeContext(false)
 
   /**
    * @param operators custom operators to register alongside the built-ins
+   * @param logger receives type-mismatch and malformed-condition diagnostics;
+   *   defaults to the module-level logger, including one set via `setLogger()`
+   *   after this resolver was constructed.
    * @throws PolicyLoadException if an operator's name collides with a
    *   built-in or with another operator in `operators`
+   * @throws PolicyArgumentError if an operator's name isn't `$`-prefixed
    */
-  constructor(operators: AnyOperator[] = []) {
+  constructor(operators: AnyOperator[] = [], logger?: Logger) {
+    this.explicitLogger = logger
+
     for (const operator of DefaultOperators) {
       this.operatorRegistry.set(operator.name, operator)
     }
 
     for (const operator of operators) {
+      assertOperatorName(operator.name)
       if (this.operatorRegistry.has(operator.name)) {
         throw new PolicyLoadException(
           `Duplicate operator "${operator.name}": an operator with this name is already registered (built-in or custom) - operator names MUST be unique.`,
@@ -73,6 +83,14 @@ export class ConditionResolver {
       return this.evaluateOperator(subject, "$eq", condition, canNarrowField, fieldMapper)
     }
 
+    if (Array.isArray(condition)) {
+      // Not a shorthand for anything (only scalars are shorthand for
+      // `$eq`) - reading an array's indices as field names would match by
+      // accident, so fail closed instead.
+      this.logger.warn(`Malformed condition: expected an object or a scalar, received an array (${JSON.stringify(condition)}).`)
+      return false
+    }
+
     if (typeof condition === "object") {
       return Object.entries(condition).every(([key, value]) => {
         if (key.startsWith("$")) {
@@ -83,7 +101,7 @@ export class ConditionResolver {
           return checkField(subject, key, value, this.contextFor(canNarrowField, fieldMapper))
         } catch (e) {
           if (e instanceof PolicyTypeMismatchError) {
-            getLogger().warn(e.message)
+            this.logger.warn(e.message)
             return false
           }
           throw e
@@ -115,8 +133,17 @@ export class ConditionResolver {
     return fieldMapper ? this.makeContext(true, fieldMapper) : this.topContext
   }
 
+  private get logger(): Logger {
+    return this.explicitLogger ?? getLogger()
+  }
+
   private makeContext(canNarrowField: boolean, fieldMapper?: SubjectFieldMapper<unknown>): OperatorContext {
+    // Looked up lazily, so a later setLogger() still reaches an existing resolver.
+    const currentLogger = () => this.logger
     const base: OperatorContext = {
+      get logger() {
+        return currentLogger()
+      },
       canNarrowField: () => canNarrowField,
       resolveSubcondition: (subject, condition) => this.evaluateInternal(subject, condition, canNarrowField, fieldMapper),
       resolveFieldSubcondition: (subject, condition) => this.evaluateInternal(subject, condition, false),

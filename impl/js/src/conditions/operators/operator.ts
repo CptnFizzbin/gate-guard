@@ -1,6 +1,7 @@
+import { PolicyArgumentError } from "../../errors/policyArgumentError.ts"
 import { PolicyTypeMismatchError } from "../../errors/policyTypeMismatchError.ts"
 import type { JsonValue } from "../../lib/json.ts"
-import { getLogger } from "../../lib/logger.ts"
+import type { Logger } from "../../lib/logger.ts"
 import type { Condition } from "../condition.ts"
 
 export interface OperatorContext {
@@ -12,6 +13,9 @@ export interface OperatorContext {
 
   /** Returns `true` if a field condition (bare-key or `$field`) may still narrow at this point in the tree - the spec permits exactly one level. */
   canNarrowField(): boolean
+
+  /** Receives this evaluation's diagnostics: the `Policy`'s `KeycardConfig.logger` when set, otherwise the module-level logger. */
+  readonly logger: Logger
 }
 
 export interface Operator<TSubject, TValue = JsonValue> {
@@ -28,18 +32,34 @@ export type InferCondition<TOperator extends AnyOperator> =
     : never
 
 /**
+ * @throws PolicyArgumentError unless `name` is `$` followed by at least one
+ *   character - a key without the prefix is always read as a field name, so
+ *   such an operator could never be reached.
+ */
+export function assertOperatorName(name: unknown): asserts name is `$${string}` {
+  if (typeof name !== "string" || !name.startsWith("$") || name.length < 2) {
+    throw new PolicyArgumentError(`Invalid operator name ${JSON.stringify(name)}: operator names MUST start with "$".`)
+  }
+}
+
+/**
  * Creates a custom operator named `name`. If `resolver` throws a
- * `PolicyTypeMismatchError`, the operator logs a warning and evaluates to
- * `false`; any other error propagates.
+ * `PolicyTypeMismatchError`, the operator logs a warning to `ctx.logger` and
+ * evaluates to `false`; any other error propagates.
  *
  * ```ts
  * const HasRole = createOperator("$hasRole", (subject: { roles: string[] }, role: string) => subject.roles.includes(role))
  * ```
+ *
+ * @throws PolicyArgumentError if `name` isn't `$` followed by at least one character.
  */
 export function createOperator<TSubject, TValue = JsonValue>(
   name: Operator<TSubject, TValue>["name"],
   resolver: Operator<TSubject, TValue>["resolve"],
 ): Operator<TSubject, TValue> {
+  // Checked at runtime too: names can come from untyped sources, such as an
+  // OperatorCatalog built from data or a plain JS caller.
+  assertOperatorName(name)
   return {
     name,
     resolve: (subject, value, ctx) => {
@@ -47,10 +67,7 @@ export function createOperator<TSubject, TValue = JsonValue>(
         return resolver(subject, value, ctx)
       } catch (e) {
         if (e instanceof PolicyTypeMismatchError) {
-          // getLogger() is called per failure rather than cached at module
-          // load, so a setLogger() call made after this module is imported
-          // still takes effect.
-          getLogger().warn(e.message)
+          ctx.logger.warn(e.message)
           return false
         }
 
@@ -85,5 +102,8 @@ export function normalizeOperators<TOperators extends AnyOperator>(
 ): AnyOperator[] {
   if (operators === undefined) return []
   if (Array.isArray(operators)) return operators
-  return Object.entries(operators).map(([name, resolve]) => createOperator(name as `$${string}`, resolve))
+  return Object.entries(operators).map(([name, resolve]) => {
+    assertOperatorName(name)
+    return createOperator(name, resolve)
+  })
 }

@@ -167,7 +167,7 @@ config?)`. `config` is an optional `KeycardConfig` (see below), shared with
 - `can(action, subject)` - Check if action is allowed
 - `cannot(action, subject)` - Check if action is denied
 - `require(action, subject)` - Throw if not allowed
-- `def()` - Get underlying definition
+- `def()` - Get underlying definition (a fresh copy on every call)
 
 ### KeycardConfig<TOperators>
 
@@ -177,7 +177,7 @@ vocabulary (`actions: ActionCatalog`, `subjects: SubjectCatalog` - keyed
 `Record<string, Action | Subject>` catalogs, additive to `meta.actions`/
 `meta.subjects`), custom operators (`operators: AnyOperator[] |
 OperatorCatalog`, either built via `createOperator` or a bare
-`{ $name: resolver }` map), the wildcard tokens (`anyAction`, `anySubject`),
+`{ $name: resolver }` map), the wildcard tokens (`anyAction`, `anySubject`), a `logger` for diagnostics,
 and field mappers a policy needs, built once instead of kept in sync by
 hand. `emitMeta` (default `true`) gates eager catalog/operator validation
 at construction, plus the diagnostic `meta.actions`/`meta.subjects`/
@@ -185,7 +185,10 @@ at construction, plus the diagnostic `meta.actions`/`meta.subjects`/
 
 ## Examples
 
-See `src/example.ts` for a complete working example.
+See `examples/basic.ts` for a complete working example.
+
+Every error KeyCard throws extends `PolicyError`; see the API reference for
+the full list and for `setLogger()`.
 
 ## See Also
 
