@@ -18,8 +18,6 @@ import java.lang.System.Logger;
 
 /**
  * Mutable, shared configuration for {@link PolicyBuilder} and {@code Policy}.
- * Deliberately has no {@code equals}/{@code hashCode}: it holds mutable
- * catalogs and a logger, so identity is the only meaningful equality.
  * {@code PolicyBuilder} and {@code Policy} read the {@code actions}/{@code subjects}
  * catalogs once, when constructed; entries added afterwards aren't seen by them.
  */

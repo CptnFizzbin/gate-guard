@@ -42,8 +42,6 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
-    <!-- One version for every Jackson module (databind, and the test-only
-         YAML format module), so they can't drift apart. -->
     <dependencyManagement>
         <dependencies>
             <dependency>
