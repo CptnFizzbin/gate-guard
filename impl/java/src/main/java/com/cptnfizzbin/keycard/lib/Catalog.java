@@ -9,7 +9,7 @@ import java.util.function.Function;
 import com.cptnfizzbin.keycard.errors.PolicyArgumentException;
 
 /**
- * Resolves action/subject vocabularies into the names they serialize as,
+ * Resolves an action/subject catalog into the names it serializes as,
  * including a dynamic Action/Subject's catalog key in place of its random name.
  */
 public final class Catalog {
@@ -17,17 +17,14 @@ public final class Catalog {
 
     /**
      * @param reverseMap raw name (e.g. a dynamic Action/Subject's random id) ->
-     *   catalog key; empty when no keyed catalog was given
-     * @param names every resolved name: a list entry's own name, or a catalog
-     *   entry's key
+     *   catalog key
+     * @param names every catalog key, in registration order
      */
     public record Resolution(Map<String, String> reverseMap, List<String> names) {}
 
     /**
-     * Resolves {@code list} and {@code catalog} into a {@link Resolution}.
+     * Resolves {@code catalog} into a {@link Resolution}.
      *
-     * @param list vocabulary declared by name only, each entry's own name
-     *   used as-is; may be {@code null}
      * @param catalog keyed vocabulary, each key becoming its entry's
      *   serialized name; may be {@code null}
      * @param nameOf reads an entry's own (possibly random) name
@@ -35,15 +32,11 @@ public final class Catalog {
      * @throws PolicyArgumentException if one entry is registered under more
      *   than one key
      */
-    public static <T> Resolution build(List<T> list, Map<String, T> catalog, Function<T, String> nameOf, String kind) {
+    public static <T> Resolution build(Map<String, ? extends T> catalog, Function<T, String> nameOf, String kind) {
         List<String> names = new ArrayList<>();
-        if (list != null) {
-            for (T entry : list) names.add(nameOf.apply(entry));
-        }
-
         Map<String, String> reverseMap = new LinkedHashMap<>();
         if (catalog != null) {
-            for (Map.Entry<String, T> entry : catalog.entrySet()) {
+            for (Map.Entry<String, ? extends T> entry : catalog.entrySet()) {
                 String key = entry.getKey();
                 String rawName = nameOf.apply(entry.getValue());
                 String existingKey = reverseMap.get(rawName);

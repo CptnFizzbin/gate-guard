@@ -26,4 +26,13 @@ public interface OperatorContext {
      * one level.
      */
     boolean canNarrowField();
+
+    /**
+     * Reports a genuine type issue (a malformed operand, a wrong-typed
+     * subject) for {@code operator} - never an ordinary non-match. When
+     * evaluated by a {@code Policy}, it goes to the {@code KeycardConfig}'s logger.
+     */
+    default void reportTypeIssue(String operator, String message) {
+        Diagnostics.logTypeIssue(Diagnostics.DEFAULT_LOGGER, operator, message);
+    }
 }

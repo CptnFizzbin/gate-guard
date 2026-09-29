@@ -1,5 +1,8 @@
 package com.cptnfizzbin.keycard.conditions;
 
+import com.cptnfizzbin.keycard.errors.PolicyLoadException;
+
+import java.lang.System.Logger;
 import java.util.Map;
 
 /**
@@ -9,6 +12,7 @@ import java.util.Map;
  */
 public final class ConditionResolver {
     private final OperatorCatalog registry;
+    private final Logger logger;
     private final OperatorContext topContext = new Ctx(true);
     private final OperatorContext nestedContext = new Ctx(false);
 
@@ -17,7 +21,16 @@ public final class ConditionResolver {
     }
 
     public ConditionResolver(OperatorCatalog operators) {
+        this(operators, null);
+    }
+
+    /**
+     * @param logger where type-issue diagnostics go; {@code null} falls back
+     *   to {@code System.getLogger("Keycard")}.
+     */
+    public ConditionResolver(OperatorCatalog operators, Logger logger) {
         this.registry = operators != null ? operators : new OperatorCatalog();
+        this.logger = logger != null ? logger : Diagnostics.DEFAULT_LOGGER;
     }
 
     public boolean evaluate(Object subject, Object condition) {
@@ -27,8 +40,8 @@ public final class ConditionResolver {
     /** Throws a {@link com.cptnfizzbin.keycard.errors.PolicyLoadException} if any name in {@code names} isn't registered, built-in or custom. */
     public void assertAllRegistered(Iterable<String> names) {
         for (String name : names) {
-            if (!registry.containsKey(name)) {
-                throw new com.cptnfizzbin.keycard.errors.PolicyLoadException(
+            if (!registry.contains(name)) {
+                throw new PolicyLoadException(
                     "meta.operators declares \"" + name + "\" but no operator with that name is registered."
                 );
             }
@@ -98,6 +111,11 @@ public final class ConditionResolver {
         @Override
         public boolean canNarrowField() {
             return canNarrowField;
+        }
+
+        @Override
+        public void reportTypeIssue(String operator, String message) {
+            Diagnostics.logTypeIssue(logger, operator, message);
         }
     }
 }

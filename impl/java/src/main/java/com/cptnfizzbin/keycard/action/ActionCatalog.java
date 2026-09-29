@@ -2,7 +2,9 @@ package com.cptnfizzbin.keycard.action;
 
 import com.cptnfizzbin.keycard.errors.PolicyArgumentException;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * A {@code key -> Action} catalog. Each key is the name its Action serializes
@@ -10,15 +12,28 @@ import java.util.LinkedHashMap;
  * {@link #add(String, Action)} gives an explicit key, which a dynamic Action
  * requires.
  */
-public final class ActionCatalog extends LinkedHashMap<String, Action> {
+public final class ActionCatalog {
+    private final Map<String, Action> entries = new LinkedHashMap<>();
+
     public ActionCatalog add(Action action) {
         if (action.dynamic())
             throw new PolicyArgumentException("Dynamic actions must be added to the catalog with a name");
         return this.add(action.name(), action);
     }
 
+    /**
+     * Registers {@code action} under {@code name}; registering the same Action
+     * under the same key again is a no-op.
+     *
+     * @throws PolicyArgumentException if a different Action is already registered under {@code name}
+     */
     public ActionCatalog add(String name, Action action) {
-        this.put(name, action);
+        Action existing = entries.putIfAbsent(name, action);
+        if (existing != null && existing != action) {
+            throw new PolicyArgumentException(
+                "ActionCatalog already has a different Action registered under \"" + name + "\"."
+            );
+        }
         return this;
     }
 
@@ -28,7 +43,7 @@ public final class ActionCatalog extends LinkedHashMap<String, Action> {
      * and registered in one line: {@code static Action Create = catalog.set("create", new Action());}
      */
     public Action set(String name, Action action) {
-        this.put(name, action);
+        this.add(name, action);
         return action;
     }
 
@@ -38,8 +53,21 @@ public final class ActionCatalog extends LinkedHashMap<String, Action> {
      * @throws PolicyArgumentException if {@code action} is dynamic
      */
     public Action set(Action action) {
-        if (action.dynamic())
-            throw new PolicyArgumentException("Dynamic actions must be added to the catalog with a name");
-        return this.set(action.name(), action);
+        this.add(action);
+        return action;
+    }
+
+    /** The Action registered under {@code name}, or {@code null}. */
+    public Action get(String name) {
+        return entries.get(name);
+    }
+
+    public boolean contains(String name) {
+        return entries.containsKey(name);
+    }
+
+    /** A read-only, insertion-ordered view of every {@code key -> Action} registration. */
+    public Map<String, Action> asMap() {
+        return Collections.unmodifiableMap(entries);
     }
 }

@@ -6,6 +6,7 @@ import org.jspecify.annotations.NonNull;
 import java.io.Serializable;
 import java.lang.invoke.SerializedLambda;
 import java.lang.reflect.Method;
+import java.lang.reflect.RecordComponent;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -134,7 +135,26 @@ public class Condition<S> {
         } catch (Exception e) {
             throw new PolicyArgumentException("Could not extract field name from method reference", e);
         }
+        if (isRecordComponent(getter, lambda)) {
+            // A record's accessor is named exactly after its component, so
+            // "isActive()" reads component "isActive" - no bean-prefix stripping.
+            return lambda.getImplMethodName();
+        }
         return getFieldName(lambda);
+    }
+
+    private static boolean isRecordComponent(FieldGetter<?, ?> getter, SerializedLambda lambda) {
+        Class<?> implClass;
+        try {
+            implClass = Class.forName(lambda.getImplClass().replace('/', '.'), false, getter.getClass().getClassLoader());
+        } catch (ClassNotFoundException | LinkageError e) {
+            return false;
+        }
+        if (!implClass.isRecord()) return false;
+        for (RecordComponent component : implClass.getRecordComponents()) {
+            if (component.getName().equals(lambda.getImplMethodName())) return true;
+        }
+        return false;
     }
 
     private static @NonNull String getFieldName(SerializedLambda lambda) {
@@ -148,10 +168,8 @@ public class Condition<S> {
             );
         }
 
-        // Convert a JavaBean getter name to its field name, e.g.
-        // "getOwnerId" -> "ownerId" - but only when the prefix is followed by
-        // an upper-case letter, so a plain accessor like "isbn()" or
-        // "getaway()" is left as-is rather than mangled to "bn"/"away".
+        // Strip "get"/"is" only before an upper-case letter, so a plain accessor
+        // like "isbn()" or "getaway()" isn't mangled to "bn"/"away".
         String stripped = stripBeanPrefix(methodName, "get");
         if (stripped == null) stripped = stripBeanPrefix(methodName, "is");
         return stripped != null ? stripped : methodName;

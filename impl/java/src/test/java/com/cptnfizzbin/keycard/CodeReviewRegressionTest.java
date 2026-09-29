@@ -40,17 +40,20 @@ public class CodeReviewRegressionTest {
 
     @Test
     public void mutatingTheDefinitionAfterLoadDoesNotChangeThePolicy() {
-        PolicyDefinition def = new PolicyDefinition()
-            .rules(new ArrayList<>(List.of(new PolicyDefinition.Rule("allow", "read", "doc"))));
+        List<PolicyDefinition.Rule> rules = new ArrayList<>(List.of(new PolicyDefinition.Rule("allow", "read", "doc")));
+        PolicyDefinition def = new PolicyDefinition().rules(rules);
         Policy policy = new Policy(def);
 
-        def.rules().add(new PolicyDefinition.Rule("allow", "delete", "doc"));
+        rules.add(new PolicyDefinition.Rule("allow", "delete", "doc"));
+        assertThrows(UnsupportedOperationException.class,
+            () -> def.rules().add(new PolicyDefinition.Rule("allow", "delete", "doc")));
+        def.rules(List.of(new PolicyDefinition.Rule("allow", "delete", "doc")));
 
         assertFalse(policy.can(DELETE, DOC));
 
     }
 
-    // --- structural validation isn't gated by emitMeta ---
+    // --- structural checks run even with emitMeta off ---
 
     @Test
     public void malformedEffectIsRejectedEvenWithEmitMetaOff() {
@@ -69,7 +72,7 @@ public class CodeReviewRegressionTest {
 
     }
 
-    // --- $eq/$in/$has use value equality across boxed numeric types ---
+    // --- $eq/$in/$has: cross-type numeric equality and any-Collection operands ---
 
     @Test
     public void integerConditionMatchesLongField() {

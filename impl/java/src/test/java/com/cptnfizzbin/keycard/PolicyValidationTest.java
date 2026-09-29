@@ -61,10 +61,9 @@ public class PolicyValidationTest {
     @Test
     public void throwsPolicyLoadExceptionForARuleWildcardedOnBothSidesCarryingACondition() {
         assertThrows(PolicyLoadException.class, () -> {
-            PolicyDefinition policyDef = new PolicyDefinition();
-
-            policyDef.rules()
-                .add(new PolicyDefinition.Rule("allow", "_ANY_", "_ANY_", Condition.op("owner_id", 1).toMap()));
+            PolicyDefinition policyDef = new PolicyDefinition().rules(List.of(
+                new PolicyDefinition.Rule("allow", "_ANY_", "_ANY_", Condition.op("owner_id", 1).toMap())
+            ));
 
             new Policy(policyDef);
         });
@@ -187,15 +186,15 @@ public class PolicyValidationTest {
 
     @Test
     public void wildcardOnlyConstructorDeclaresJustTheTokensRequested() {
-        Policy policy = new PolicyBuilder(new KeycardConfig().anyAction(new Action("*")).anySubject(null))
+        Policy policy = new PolicyBuilder(new KeycardConfig().anyAction(new Action("*")).disableAnySubject())
             .allow(new Action("*"), new Subject<>("Article"))
             .allow(new Action("Read"), new Subject<>("*"))
             .build();
 
         assertTrue(policy.can(new Action("AnythingGoes"), new Subject<>("Article")));
 
-        // The subject wildcard is disabled (false): a rule's literal "*"
-        // subject only matches an incoming subject also literally named "*".
+        // With the subject wildcard disabled, a rule's literal "*" subject only
+        // matches an incoming subject also literally named "*".
         assertFalse(policy.can(new Action("Read"), new Subject<>("AnySubjectName")));
         assertTrue(policy.can(new Action("Read"), new Subject<>("*")));
     }
