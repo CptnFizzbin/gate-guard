@@ -4,6 +4,7 @@ import { PolicyBuilder } from "./policyBuilder.ts"
 import { createAction } from "../action/index.ts"
 import { createOperator } from "../conditions/index.ts"
 import { PolicyArgumentError } from "../errors/index.ts"
+import { Policy } from "../policy/index.ts"
 import { createSubject } from "../subject/index.ts"
 
 describe("PolicyBuilder: meta.actions/subjects/operators are derived from usage", () => {
@@ -199,6 +200,15 @@ describe("PolicyBuilder: output isolation", () => {
     builder.deny(Read, Article)
 
     expect(def.rules).toHaveLength(1)
+  })
+
+  test("rules added after buildDef() don't change a Policy constructed from that definition", () => {
+    const builder = new PolicyBuilder().allow(Read, Article)
+    const policy = new Policy(builder.buildDef())
+
+    builder.deny(Read, Article)
+
+    expect(policy.can(Read, Article)).toBe(true)
   })
 
   test("mutating a buildDef() result doesn't change the builder", () => {
