@@ -92,27 +92,36 @@ public class PolicyBuilder {
     public PolicyDefinition buildDef() {
         return new PolicyDefinition()
             .rules(this.rules)
-            // FIXME: emitMeta(false) drops anyAction/anySubject too, so a configured
-            // wildcard token silently stops matching and a disabled one reverts to
-            // "_ANY_" - see #49
-            .meta(config.emitMeta() ? buildMeta() : null);
+            .meta(buildMeta());
     }
 
+    @Nullable
     private PolicyDefinition.Meta buildMeta() {
+        boolean hasWildcards = config.anyAction() != null || config.anySubject() != null;
+        if (!config.emitMeta() && !hasWildcards) {
+            return null;
+        }
+
+        PolicyDefinition.Meta meta = new PolicyDefinition.Meta();
+
+        // Emitted regardless of emitMeta: evaluation depends on the wildcard
+        // tokens, so dropping them would silently revert to "_ANY_" (#49).
+        meta.anyAction(config.anyAction());
+        meta.anySubject(config.anySubject());
+
+        if (!config.emitMeta()) {
+            return meta;
+        }
+
         Set<String> actions = new LinkedHashSet<>(actionsUsed);
         actions.addAll(actionResolution.names());
 
         Set<String> subjects = new LinkedHashSet<>(subjectsUsed);
         subjects.addAll(subjectResolution.names());
 
-        PolicyDefinition.Meta meta = new PolicyDefinition.Meta();
-
         meta.actions(List.copyOf(actions));
         meta.subjects(List.copyOf(subjects));
         meta.operators(List.copyOf(config.operators().customNames()));
-
-        meta.anyAction(config.anyAction());
-        meta.anySubject(config.anySubject());
 
         return meta;
     }
