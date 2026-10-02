@@ -9,6 +9,7 @@ import com.cptnfizzbin.keycard.conditions.OperatorCatalog;
 import com.cptnfizzbin.keycard.errors.PolicyArgumentException;
 import com.cptnfizzbin.keycard.policy.Policy;
 import com.cptnfizzbin.keycard.policy.PolicyDefinition;
+import com.cptnfizzbin.keycard.policy.WildcardToken;
 import com.cptnfizzbin.keycard.subject.Subject;
 import com.cptnfizzbin.keycard.subject.SubjectCatalog;
 import lombok.AllArgsConstructor;
@@ -173,6 +174,40 @@ public class VisionApiTest {
             .buildDef();
 
         assertNull(def.meta());
+    }
+
+    @Test
+    public void emitMetaFalseKeepsAConfiguredAnyAction() {
+        Action star = new Action("*");
+        KeycardConfig config = new KeycardConfig().emitMeta(false).anyAction(star);
+
+        Policy policy = new PolicyBuilder(config).allow(star, new Subject<>("Article")).build();
+
+        assertTrue(policy.can(new Action("Read"), new Subject<>("Article")));
+    }
+
+    @Test
+    public void emitMetaFalseKeepsADisabledAnySubject() {
+        KeycardConfig config = new KeycardConfig().emitMeta(false).disableAnySubject();
+
+        Policy policy = new PolicyBuilder(config).allow(new Action("Read"), new Subject<>("_ANY_")).build();
+
+        assertFalse(policy.can(new Action("Read"), new Subject<>("Article")));
+    }
+
+    @Test
+    public void emitMetaFalseEmitsOnlyTheWildcardTokens() {
+        KeycardConfig config = new KeycardConfig().emitMeta(false).anyAction(new Action("*"));
+
+        PolicyDefinition def = new PolicyBuilder(config)
+            .allow(new Action("Read"), new Subject<>("Article"))
+            .buildDef();
+
+        assertEquals(new WildcardToken.Named("*"), def.meta().anyAction());
+        assertNull(def.meta().anySubject());
+        assertNull(def.meta().actions());
+        assertNull(def.meta().subjects());
+        assertNull(def.meta().operators());
     }
 
     @Test

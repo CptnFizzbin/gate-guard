@@ -37,7 +37,9 @@ public class KeycardConfig {
      * When {@code true} (the default), {@code PolicyBuilder}'s {@code allow()}/{@code deny()} reject an
      * unregistered dynamic Action/Subject, {@code Policy}'s constructor rejects a definition that doesn't satisfy
      * its own {@code meta.actions}/{@code meta.subjects}/{@code meta.operators}, and {@code PolicyBuilder#buildDef()}
-     * attaches the derived {@code meta} block. Structural rule checks (a malformed rule tuple, a conditional
+     * attaches the derived {@code meta.actions}/{@code meta.subjects}/{@code meta.operators}. A configured
+     * {@code anyAction}/{@code anySubject} is emitted as {@code meta.anyAction}/{@code meta.anySubject} either
+     * way, since evaluation depends on it. Structural rule checks (a malformed rule tuple, a conditional
      * both-sides-wildcarded rule) run either way.
      */
     private boolean emitMeta = true;
