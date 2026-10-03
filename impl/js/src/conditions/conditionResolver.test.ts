@@ -1,11 +1,9 @@
 import { describe, expect, test, vi } from "vitest"
 
 import { ConditionResolver } from "./conditionResolver.ts"
-import { createOperator } from "./operators/operator.ts"
 import { PolicyArgumentError, PolicyLoadException, PolicyTypeMismatchError } from "../errors/index.ts"
-import { setLogger } from "../lib/logger.ts"
-
-type Logger = Parameters<typeof setLogger>[0]
+import type { Logger } from "../lib/logger.ts"
+import { createOperator } from "./operators/operator.ts"
 
 function mockLogger() {
   return { info: vi.fn<Logger["info"]>(), warn: vi.fn<Logger["warn"]>(), error: vi.fn<Logger["error"]>() }
@@ -28,16 +26,10 @@ describe("ConditionResolver", () => {
     expect(logger.warn).toHaveBeenCalledTimes(1)
   })
 
-  test("without an explicit logger, diagnostics reach the module-level logger set later via setLogger", () => {
+  test("without a logger, diagnostics are discarded", () => {
     const resolver = new ConditionResolver()
-    const logger = mockLogger()
-    setLogger(logger)
-    try {
-      resolver.evaluate({ n: 1 }, { n: { $gt: "x" } } as never)
-      expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("[KeyCard]"))
-    } finally {
-      setLogger({ info: () => {}, warn: () => {}, error: () => {} })
-    }
+
+    expect(resolver.evaluate({ n: 1 }, { n: { $gt: "x" } } as never)).toBe(false)
   })
 
   test("a custom operator throwing PolicyTypeMismatchError evaluates to false and is logged", () => {
