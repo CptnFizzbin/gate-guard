@@ -188,7 +188,7 @@ at construction, plus the diagnostic `meta.actions`/`meta.subjects`/
 See `examples/basic.ts` for a complete working example.
 
 Every error KeyCard throws extends `PolicyError`; see the API reference for
-the full list and for `setLogger()`.
+the full list.
 
 ## See Also
 

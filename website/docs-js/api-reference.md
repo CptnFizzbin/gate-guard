@@ -127,8 +127,7 @@ const policy = new Policy(policyDef, config);
   wildcard position entirely; omitted means the `"_ANY_"` default applies.
 - `logger` — receives every non-fatal diagnostic the `Policy` emits (a
   condition type mismatch or malformed condition, an unregistered dynamic
-  Action/Subject). Falls back to the module-level logger set via
-  `setLogger()`.
+  Action/Subject). Diagnostics are discarded when unset.
 - `mapper` — a `SubjectFieldMapperCatalog`, consulted as a fallback for any
   subject that doesn't carry its own field mapper.
 - `emitMeta` (default `true`) — gates the eager catalog/operator
@@ -212,10 +211,6 @@ Every error KeyCard throws extends `PolicyError`, so one
   (built-in or custom), it's logged as a warning and the condition evaluates
   to `false`. Throw it from a custom operator to get the same behavior.
 - `PolicyError` itself — thrown by `require()` when the check is denied.
-
-`setLogger(logger)` sets the module-level `Logger` (`{ info, warn, error }`)
-used whenever a `Policy` has no `KeycardConfig.logger` of its own; messages
-sent through it are prefixed with `[KeyCard]`. By default nothing is logged.
 
 ## See also
 

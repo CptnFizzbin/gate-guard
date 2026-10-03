@@ -15,7 +15,6 @@ export { PolicyBuilder } from "./builder/index.ts"
 export type { KeycardConfig } from "./keycardConfig.ts"
 
 export type { Logger } from "./lib/logger.ts"
-export { setLogger } from "./lib/logger.ts"
 
 export type { TypeMismatchInfo } from "./errors/index.ts"
 export {

@@ -34,8 +34,8 @@ export interface KeycardConfig<TOperators extends AnyOperator = never> {
   /**
    * Logger for non-fatal diagnostics: condition type mismatches and malformed
    * conditions during evaluation, and an unregistered dynamic Action/Subject
-   * passed to `.can()`/`.cannot()`/`.require()`. Defaults to the module-level
-   * logger set via `setLogger()`.
+   * passed to `.can()`/`.cannot()`/`.require()`. Diagnostics are discarded
+   * when unset.
    */
   logger?: Logger
   /**

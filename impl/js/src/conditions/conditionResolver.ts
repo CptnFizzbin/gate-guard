@@ -5,7 +5,7 @@ import { PolicyLoadException } from "../errors/index.ts"
 import { PolicyTypeMismatchError } from "../errors/policyTypeMismatchError.ts"
 import type { JsonValue } from "../lib/json.ts"
 import type { Logger } from "../lib/logger.ts"
-import { getLogger } from "../lib/logger.ts"
+import { noopLogger } from "../lib/logger.ts"
 import type { SubjectFieldMapper } from "../subject/subjectFieldMapper.ts"
 import { DefaultOperators } from "./operators/defaultOperators.ts"
 import type { FieldMapperContext } from "./operators/field/fieldAccess.ts"
@@ -19,21 +19,22 @@ export const BUILTIN_OPERATOR_NAMES: ReadonlySet<string> = new Set(DefaultOperat
  */
 export class ConditionResolver {
   private readonly operatorRegistry = new Map<string, AnyOperator>()
-  private readonly explicitLogger: Logger | undefined
-  private readonly topContext: OperatorContext = this.makeContext(true)
-  private readonly nestedContext: OperatorContext = this.makeContext(false)
+  private readonly logger: Logger
+  private readonly topContext: OperatorContext
+  private readonly nestedContext: OperatorContext
 
   /**
    * @param operators custom operators to register alongside the built-ins
    * @param logger receives type-mismatch and malformed-condition diagnostics;
-   *   defaults to the module-level logger, including one set via `setLogger()`
-   *   after this resolver was constructed.
+   *   when omitted, they are discarded.
    * @throws PolicyLoadException if an operator's name collides with a
    *   built-in or with another operator in `operators`
    * @throws PolicyArgumentError if an operator's name isn't `$`-prefixed
    */
   constructor(operators: AnyOperator[] = [], logger?: Logger) {
-    this.explicitLogger = logger
+    this.logger = logger ?? noopLogger
+    this.topContext = this.makeContext(true)
+    this.nestedContext = this.makeContext(false)
 
     for (const operator of DefaultOperators) {
       this.operatorRegistry.set(operator.name, operator)
@@ -133,17 +134,9 @@ export class ConditionResolver {
     return fieldMapper ? this.makeContext(true, fieldMapper) : this.topContext
   }
 
-  private get logger(): Logger {
-    return this.explicitLogger ?? getLogger()
-  }
-
   private makeContext(canNarrowField: boolean, fieldMapper?: SubjectFieldMapper<unknown>): OperatorContext {
-    // Looked up lazily, so a later setLogger() still reaches an existing resolver.
-    const currentLogger = () => this.logger
     const base: OperatorContext = {
-      get logger() {
-        return currentLogger()
-      },
+      logger: this.logger,
       canNarrowField: () => canNarrowField,
       resolveSubcondition: (subject, condition) => this.evaluateInternal(subject, condition, canNarrowField, fieldMapper),
       resolveFieldSubcondition: (subject, condition) => this.evaluateInternal(subject, condition, false),

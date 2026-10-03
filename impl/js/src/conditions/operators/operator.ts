@@ -14,7 +14,7 @@ export interface OperatorContext {
   /** Returns `true` if a field condition (bare-key or `$field`) may still narrow at this point in the tree - the spec permits exactly one level. */
   canNarrowField(): boolean
 
-  /** Receives this evaluation's diagnostics: the `Policy`'s `KeycardConfig.logger` when set, otherwise the module-level logger. */
+  /** Receives this evaluation's diagnostics: the `Policy`'s `KeycardConfig.logger`, or a no-op logger when unset. */
   readonly logger: Logger
 }
 

@@ -12,7 +12,8 @@ import { normalizeOperators } from "../conditions/operators/operator.ts"
 import { PolicyError, PolicyLoadException, PolicyVersionException } from "../errors/index.ts"
 import type { KeycardConfig } from "../keycardConfig.ts"
 import { buildCatalog, resolveName } from "../lib/catalog.ts"
-import { getLogger } from "../lib/logger.ts"
+import type { Logger } from "../lib/logger.ts"
+import { noopLogger } from "../lib/logger.ts"
 import type { Subject } from "../subject/index.ts"
 import type { SubjectFieldMapper } from "../subject/subjectFieldMapper.ts"
 import { KEYCARD_POLICY_SUPPORTED_VERSIONS } from "../version.ts"
@@ -83,6 +84,7 @@ export class Policy<
   private readonly subjectCatalog: Map<string, string>
   private readonly anyAction: string | typeof DISABLED
   private readonly anySubject: string | typeof DISABLED
+  private readonly logger: Logger
   private readonly warnedDynamicIds = new Set<string>()
 
   /**
@@ -112,6 +114,7 @@ export class Policy<
 
     this.definition = cloneDefinition(definition)
     this.config = config
+    this.logger = config.logger ?? noopLogger
     this.actionCatalog = actions.reverseMap
     this.subjectCatalog = subjects.reverseMap
     this.anyAction = effectiveAnyAction(this.definition.meta)
@@ -353,7 +356,7 @@ export class Policy<
     // would otherwise fall through to default deny silently.
     if (!value.__dynamic || reverseMap.has(value.name) || this.warnedDynamicIds.has(value.name)) return
     this.warnedDynamicIds.add(value.name)
-    ;(this.config.logger ?? getLogger()).warn(
+    this.logger.warn(
       `${kind} created via ${factory}() with no name was checked but never registered in any KeycardConfig catalog reachable from this Policy - it can never match a non-wildcard rule.`,
     )
   }
