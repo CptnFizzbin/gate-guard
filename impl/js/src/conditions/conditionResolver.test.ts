@@ -1,9 +1,9 @@
 import { describe, expect, test, vi } from "vitest"
 
 import { ConditionResolver } from "./conditionResolver.ts"
+import { PolicyArgumentError, PolicyLoadException, PolicyTypeMismatchError } from "../errors/index.ts"
 import type { Logger } from "../lib/logger.ts"
 import { createOperator } from "./operators/operator.ts"
-import { PolicyArgumentError, PolicyLoadException, PolicyTypeMismatchError } from "../errors/index.ts"
 
 function mockLogger() {
   return { info: vi.fn<Logger["info"]>(), warn: vi.fn<Logger["warn"]>(), error: vi.fn<Logger["error"]>() }
