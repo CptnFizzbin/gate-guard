@@ -28,3 +28,5 @@ export const DefaultOperators: AnyOperator[] = [
   NotOperator,
   FieldOperator,
 ]
+
+export const BUILTIN_OPERATOR_NAMES: ReadonlySet<string> = new Set(DefaultOperators.map((op) => op.name))

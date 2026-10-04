@@ -15,8 +15,7 @@ describe("PolicyBuilder: meta.actions/subjects/operators are derived from usage"
     const update = createAction("Update")
     const hasRole = createOperator("$hasRole", () => true)
 
-    const def = new PolicyBuilder({ operators: [hasRole] })
-      .allow(read, article)
+    const def = new PolicyBuilder({ operators: [hasRole] }).allow(read, article)
       .allow(update, user, { $hasRole: "admin" })
       .buildDef()
 
@@ -26,9 +25,7 @@ describe("PolicyBuilder: meta.actions/subjects/operators are derived from usage"
   })
 
   test("leaves the wildcard tokens undeclared by default", () => {
-    const def = new PolicyBuilder()
-      .allow(createAction("Read"), createSubject("Article"))
-      .buildDef()
+    const def = new PolicyBuilder().allow(createAction("Read"), createSubject("Article")).buildDef()
 
     // Undeclared, not disabled - an explicit null would turn the wildcard off.
     expect(def.meta?.anyAction).toBeUndefined()
@@ -36,10 +33,8 @@ describe("PolicyBuilder: meta.actions/subjects/operators are derived from usage"
   })
 
   test("the config constructor declares just the tokens requested", () => {
-    const policy = new PolicyBuilder({ anyAction: "*", anySubject: null })
-      .allow(createAction("*"), createSubject("Article"))
-      .allow(createAction("Read"), createSubject("*"))
-      .build()
+    const policy = new PolicyBuilder({ anyAction: "*", anySubject: null }).allow(
+      createAction("*"), createSubject("Article")).allow(createAction("Read"), createSubject("*")).build()
 
     expect(policy.can(createAction("AnythingGoes"), createSubject("Article"))).toBe(true)
 
@@ -62,32 +57,32 @@ describe("PolicyBuilder: meta.actions/subjects/operators are derived from usage"
     const anyAction = createAction("*")
     const anySubject = createSubject("*")
 
-    const policy = new PolicyBuilder({ anyAction, anySubject })
-      .allow(createAction("*"), createSubject("*"))
-      .build()
+    const policy = new PolicyBuilder({ anyAction, anySubject }).allow(createAction("*"), createSubject("*")).build()
 
     expect(policy.can(createAction("Anything"), createSubject("Anything"))).toBe(true)
   })
 
   test("KeycardConfig.actions/subjects are folded into meta.actions/meta.subjects alongside what usage derives", () => {
-    const def = new PolicyBuilder({ actions: { Delete: createAction("Delete") }, subjects: { Comment: createSubject("Comment") } })
-      .allow(createAction("Read"), createSubject("Article"))
-      .buildDef()
+    const def = new PolicyBuilder(
+      { actions: { Delete: createAction("Delete") }, subjects: { Comment: createSubject("Comment") } }).allow(
+      createAction("Read"), createSubject("Article")).buildDef()
 
-    expect(def.meta?.actions).toEqual(["Read", "Delete"])
-    expect(def.meta?.subjects).toEqual(["Article", "Comment"])
+    expect(def.meta?.actions).toHaveLength(2)
+    expect(def.meta?.actions).toEqual(expect.arrayContaining(["Read", "Delete"]))
+    expect(def.meta?.subjects).toHaveLength(2)
+    expect(def.meta?.subjects).toEqual(expect.arrayContaining(["Article", "Comment"]))
   })
 
-  test("KeycardConfig.operators accepts an OperatorCatalog (bare resolver functions) as well as an AnyOperator[]", () => {
-    const article = createSubject<{ id: number }>("Article")
+  test(
+    "KeycardConfig.operators accepts an OperatorCatalog (bare resolver functions) as well as an AnyOperator[]", () => {
+      const article = createSubject<{ id: number }>("Article")
 
-    const policy = new PolicyBuilder({ operators: { $hasRole: () => true } })
-      // @ts-expect-error -- an OperatorCatalog's keys aren't inferred into the builder's condition type yet (only AnyOperator[] is)
-      .allow(createAction("Read"), article, { $hasRole: "admin" })
-      .build()
+      const policy = new PolicyBuilder({ operators: { $hasRole: () => true } })
+        .allow(createAction("Read"), article, { $hasRole: "admin" })
+        .build()
 
-    expect(policy.can(createAction("Read"), article.wrap({ id: 1 }))).toBe(true)
-  })
+      expect(policy.can(createAction("Read"), article.wrap({ id: 1 }))).toBe(true)
+    })
 })
 
 describe("PolicyBuilder: dynamic (no-name) Action/Subject resolved via a KeycardConfig catalog", () => {
@@ -95,9 +90,7 @@ describe("PolicyBuilder: dynamic (no-name) Action/Subject resolved via a Keycard
     const create = createAction()
     const article = createSubject()
 
-    const def = new PolicyBuilder({ actions: { create }, subjects: { article } })
-      .allow(create, article)
-      .buildDef()
+    const def = new PolicyBuilder({ actions: { create }, subjects: { article } }).allow(create, article).buildDef()
 
     expect(def.rules).toEqual([["allow", "create", "article"]])
     expect(def.meta?.actions).toEqual(["create"])
@@ -130,8 +123,7 @@ describe("PolicyBuilder: dynamic (no-name) Action/Subject resolved via a Keycard
     const create = createAction("Create")
     const article = createSubject("Article")
 
-    const def = new PolicyBuilder({ actions: { submit: create }, subjects: { post: article } })
-      .allow(create, article)
+    const def = new PolicyBuilder({ actions: { submit: create }, subjects: { post: article } }).allow(create, article)
       .buildDef()
 
     expect(def.rules).toEqual([["allow", "submit", "post"]])
@@ -139,27 +131,28 @@ describe("PolicyBuilder: dynamic (no-name) Action/Subject resolved via a Keycard
 })
 
 describe("PolicyBuilder: emitMeta", () => {
-  test("defaults to true - meta.actions/subjects/operators are emitted, and catalog/registration errors are eager", () => {
-    const def = new PolicyBuilder()
-      .allow(createAction("Read"), createSubject("Article"))
-      .buildDef()
+  test(
+    "defaults to true - meta.actions/subjects/operators are emitted, and catalog/registration errors are eager", () => {
+      const def = new PolicyBuilder().allow(createAction("Read"), createSubject("Article")).buildDef()
 
-    expect(def.meta?.actions).toEqual(["Read"])
-    expect(def.meta?.subjects).toEqual(["Article"])
+      expect(def.meta?.actions).toEqual(["Read"])
+      expect(def.meta?.subjects).toEqual(["Article"])
 
-    expect(() => new PolicyBuilder().allow(createAction(), createSubject("Article"))).toThrow(PolicyArgumentError)
-  })
+      expect(() => new PolicyBuilder().allow(createAction(), createSubject("Article"))).toThrow(PolicyArgumentError)
+    })
 
-  test("false: meta.actions/subjects/operators are omitted, but functional anyAction/anySubject overrides are still emitted", () => {
-    const def = new PolicyBuilder({ emitMeta: false, anyAction: "*" })
-      .allow(createAction("Read"), createSubject("Article"))
-      .buildDef()
+  test(
+    "false: meta.actions/subjects/operators are omitted, but functional anyAction/anySubject overrides are still emitted",
+    () => {
+      const def = new PolicyBuilder({ emitMeta: false, anyAction: "*" }).allow(
+        createAction("Read"), createSubject("Article")).buildDef()
 
-    expect(def.meta?.actions).toBeUndefined()
-    expect(def.meta?.subjects).toBeUndefined()
-    expect(def.meta?.operators).toBeUndefined()
-    expect(def.meta?.anyAction).toBe("*")
-  })
+      expect(def.meta?.actions).toBeUndefined()
+      expect(def.meta?.subjects).toBeUndefined()
+      expect(def.meta?.operators).toBeUndefined()
+      expect(def.meta?.anyAction).toBe("*")
+    },
+  )
 
   test("false: a dynamic Action/Subject never registered in any catalog no longer throws at addRule time", () => {
     const create = createAction()

@@ -1,28 +1,19 @@
-import type { Action } from "../action/index.ts"
+import type { AnyAction } from "../action/action.ts"
 import type { AnyCondition } from "../conditions/condition.ts"
 import type { Condition } from "../conditions/index.ts"
+import { BUILTIN_OPERATOR_NAMES } from "../conditions/operators/defaultOperators.ts"
 import type { AnyOperator, InferCondition } from "../conditions/operators/operator.ts"
-import { assertOperatorName, normalizeOperators } from "../conditions/operators/operator.ts"
 import { PolicyArgumentError } from "../errors/index.ts"
 import type { KeycardConfig } from "../keycardConfig.ts"
-import { buildCatalog, resolveName } from "../lib/catalog.ts"
+import { KeycardContext } from "../keycardContext.ts"
 import { Policy } from "../policy/policy.ts"
 import type { Effect, Meta, PolicyDefinition, RuleTuple } from "../policy/policyDefinition.ts"
-import { DEFAULT_WILDCARD, DISABLED, effectiveAnyAction, effectiveAnySubject } from "../policy/wildcards.ts"
+import { DEFAULT_WILDCARD } from "../policy/wildcards.ts"
 import type { Subject } from "../subject/index.ts"
+import type { AnySubject } from "../subject/subject.ts"
 import { KEYCARD_POLICY_VERSION } from "../version.ts"
 
 export const BUILDER_VERSION = KEYCARD_POLICY_VERSION
-
-function wildcardNameOf(
-  value: Action | Subject | string | false | undefined | null,
-  reverseMap: Map<string, string>,
-): string | false | null {
-  if (value === null || value === false) return value
-  if (typeof value === "undefined") return DEFAULT_WILDCARD
-  if (typeof value === "string") return value
-  return resolveName(reverseMap, value.name)
-}
 
 /**
  * Builds a {@link PolicyDefinition} rule by rule. {@link buildDef} derives
@@ -33,43 +24,20 @@ function wildcardNameOf(
  * declare the wildcard tokens, which can't be inferred from usage.
  */
 export class PolicyBuilder<
-  TActions extends Action = Action,
-  TSubjects extends Subject = Subject,
-  TOperators extends AnyOperator = never,
+  TActions extends AnyAction = AnyAction,
+  TSubjects extends AnySubject = AnySubject,
+  TOperators extends AnyOperator = AnyOperator,
 > {
+  private readonly ctx: KeycardContext<TOperators>
   private readonly rules: RuleTuple[] = []
-  private readonly anyAction: string | false | null
-  private readonly anySubject: string | false | null
-  private readonly operators: AnyOperator[]
-  private readonly actionsUsed = new Set<string>()
-  private readonly subjectsUsed = new Set<string>()
-  private readonly config: KeycardConfig<TOperators>
-  private readonly emitMeta: boolean
-  private readonly actionCatalog: Map<string, string>
-  private readonly subjectCatalog: Map<string, string>
-  private readonly configActionNames: string[]
-  private readonly configSubjectNames: string[]
 
   /**
    * @param config shared with `Policy` - see `KeycardConfig`
    * @throws PolicyArgumentError if `emitMeta` is true and one Action/Subject is
    *   registered under two catalog keys
    */
-  constructor(config: KeycardConfig<TOperators> = {}) {
-    this.emitMeta = config.emitMeta ?? true
-
-    const actions = buildCatalog(config.actions, "action", this.emitMeta)
-    const subjects = buildCatalog(config.subjects, "subject", this.emitMeta)
-    this.actionCatalog = actions.reverseMap
-    this.subjectCatalog = subjects.reverseMap
-    this.configActionNames = actions.names
-    this.configSubjectNames = subjects.names
-
-    this.anyAction = wildcardNameOf(config.anyAction, this.actionCatalog)
-    this.anySubject = wildcardNameOf(config.anySubject, this.subjectCatalog)
-    this.config = config
-    this.operators = normalizeOperators(config.operators)
-    this.operators.forEach((op) => assertOperatorName(op.name))
+  constructor(config: KeycardContext<TOperators> | KeycardConfig<TOperators> = {}) {
+    this.ctx = KeycardContext.from(config)
   }
 
   allow<TAction extends TActions, TSubject extends TSubjects>(
@@ -106,8 +74,8 @@ export class PolicyBuilder<
     return this
   }
 
-  build(): Policy<TActions, TSubjects, TOperators> {
-    return new Policy(this.buildDef(), this.config)
+  build(): Policy<TActions, TSubjects> {
+    return new Policy(this.buildDef(), this.ctx)
   }
 
   /**
@@ -137,42 +105,43 @@ export class PolicyBuilder<
 
   private buildMeta(): Meta {
     const meta: Meta = {}
-    if (this.anyAction !== DEFAULT_WILDCARD) meta.anyAction = this.anyAction
-    if (this.anySubject !== DEFAULT_WILDCARD) meta.anySubject = this.anySubject
+    if (this.ctx.anyAction !== DEFAULT_WILDCARD) meta.anyAction = this.ctx.anyAction
+    if (this.ctx.anySubject !== DEFAULT_WILDCARD) meta.anySubject = this.ctx.anySubject
 
-    if (this.emitMeta) {
-      meta.actions = Array.from(new Set([...this.actionsUsed, ...this.configActionNames]))
-      meta.subjects = Array.from(new Set([...this.subjectsUsed, ...this.configSubjectNames]))
-      if (this.operators.length > 0) meta.operators = this.operators.map((op) => op.name)
+    if (this.ctx.emitMeta) {
+      meta.actions = [...this.ctx.actions.names()]
+      meta.subjects = [...this.ctx.subjects.names()]
+
+      const custom = [...this.ctx.operators.names()].filter((name) => !BUILTIN_OPERATOR_NAMES.has(name))
+      if (custom.length > 0) meta.operators = custom
     }
 
     return meta
   }
 
   private addRule(effect: Effect, action: TActions, subject: TSubjects, conditions?: AnyCondition): this {
-    if (this.emitMeta && action.__dynamic && !this.actionCatalog.has(action.name)) {
+    if (this.ctx.emitMeta && action.__dynamic && !this.ctx.actions.has(action.id)) {
       throw new PolicyArgumentError(
         `This Action was created via createAction() with no name and must be registered as a catalog value on the KeycardConfig handed to this PolicyBuilder before use.`,
       )
     }
-    if (this.emitMeta && subject.__dynamic && !this.subjectCatalog.has(subject.name)) {
+
+    if (this.ctx.emitMeta && subject.__dynamic && !this.ctx.subjects.has(subject.id)) {
       throw new PolicyArgumentError(
         `This Subject was created via createSubject() with no name and must be registered as a catalog value on the KeycardConfig handed to this PolicyBuilder before use.`,
       )
     }
 
-    const actionName = resolveName(this.actionCatalog, action.name)
-    const subjectName = resolveName(this.subjectCatalog, subject.name)
+    const actionName = this.ctx.actions.add(action).name
+    const subjectName = this.ctx.subjects.add(subject).name
 
     if (conditions) {
-      // The spec requires the builder to reject a conditional rule wildcarded on
-      // both sides at the call site, not later in Policy.from. Checked even
-      // when emitMeta is false, since it guards evaluation, not diagnostics.
-      const anyAction = effectiveAnyAction({ anyAction: this.anyAction })
-      const anySubject = effectiveAnySubject({ anySubject: this.anySubject })
+      // The spec requires the builder to reject a conditional rule wildcarded
+      // on both sides at the call site, not later in Policy.from.
+      const { anyAction, anySubject } = this.ctx
       if (
-        anyAction !== DISABLED && actionName === anyAction
-        && anySubject !== DISABLED && subjectName === anySubject
+        anyAction !== false && anyAction !== null && actionName === anyAction
+        && anySubject !== false && anySubject !== null && subjectName === anySubject
       ) {
         throw new PolicyArgumentError(
           `A rule wildcarded on both the action ("${anyAction}") and the subject ("${anySubject}") MUST NOT carry a Conditions element.`,
@@ -180,13 +149,12 @@ export class PolicyBuilder<
       }
     }
 
-    this.actionsUsed.add(actionName)
-    this.subjectsUsed.add(subjectName)
-
     const rule: RuleTuple = conditions !== undefined
       ? [effect, actionName, subjectName, conditions]
       : [effect, actionName, subjectName]
+
     this.rules.push(rule)
+
     return this
   }
 }

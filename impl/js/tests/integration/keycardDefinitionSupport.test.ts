@@ -7,12 +7,12 @@ import * as YAML from "yaml"
 
 import { actionArgFor, listYamlFiles, subjectArgFor } from "./fixtureUtils.ts"
 import { KEYCARD_COMPLIANCE_FIXTURES } from "../../paths.ts"
-import type { PolicyDefinition } from "../../src/index.ts"
+import type { KeycardConfig, PolicyDefinition } from "../../src/index.ts"
 import { createOperator, Policy } from "../../src/index.ts"
 import type { JsonObject } from "../../src/lib/json.ts"
 import { KEYCARD_POLICY_SUPPORTED_VERSIONS } from "../../src/version.ts"
 
-interface V0Case {
+interface V0Case extends JsonObject {
   name?: string
   check:
     | [action: string, subject: string]
@@ -66,10 +66,12 @@ describe.each(fixtureFiles)("conformance fixture: $fileName", ({ filePath }) => 
     }
 
     test.each(suite.tests)("$name", (testCase) => {
-      const policy = Policy.from(suite, {
+      const config = {
         operators: [
           createOperator("$hasRole", (subject, value) => {
-            const roles = subject && typeof subject === "object" ? (subject as Record<string, unknown>).roles : undefined
+            const roles = subject && typeof subject === "object"
+              ? (subject as Record<string, unknown>).roles
+              : undefined
             return Array.isArray(roles) && roles.includes(value)
           }),
           createOperator("$startsWithUpper", (subject, expected) => {
@@ -79,7 +81,9 @@ describe.each(fixtureFiles)("conformance fixture: $fileName", ({ filePath }) => 
             return isUpper === expected
           }),
         ],
-      })
+      } satisfies KeycardConfig
+
+      const policy = Policy.from(suite, config)
 
       const [action, subject, claims] = testCase.check
 

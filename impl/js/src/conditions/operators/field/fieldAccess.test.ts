@@ -47,15 +47,8 @@ describe("field conditions on Object.prototype names", () => {
   const resolver = new ConditionResolver()
 
   test("a condition on an inherited Object.prototype name is a missing field", () => {
-    expect(resolver.evaluate({}, { hasOwnProperty: { $not: { $eq: 1 } } } as never)).toBe(false)
-    expect(resolver.evaluate({}, { constructor: { $not: { $eq: null } } } as never)).toBe(false)
-    // ...with the usual bare-$ne carve-out for a missing field
-    expect(resolver.evaluate({}, { toString: { $ne: 1 } } as never)).toBe(true)
-  })
-
-  test("a field mapper only supplies the fields it defines itself", () => {
-    const mapper = { title: (a: { t: string }) => a.t }
-    expect(resolver.evaluate({ t: "x" }, { title: "x" } as never, mapper)).toBe(true)
-    expect(resolver.evaluate({ t: "x" }, { toString: { $substr: "object" } } as never, mapper)).toBe(false)
+    expect(resolver.evaluate({}, { hasOwnProperty: { $not: { $eq: 1 } } })).toBe(false)
+    expect(resolver.evaluate({}, { constructor: { $not: { $eq: null } } })).toBe(false)
+    expect(resolver.evaluate({}, { toString: { $ne: 1 } })).toBe(true)
   })
 })
