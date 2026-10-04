@@ -2,9 +2,13 @@ import { PolicyArgumentError } from "../../errors/policyArgumentError.ts"
 import { PolicyTypeMismatchError } from "../../errors/policyTypeMismatchError.ts"
 import type { JsonValue } from "../../lib/json.ts"
 import type { Logger } from "../../lib/logger.ts"
+import { randomId } from "../../lib/randomId.ts"
 import type { Condition } from "../condition.ts"
 
 export interface OperatorContext {
+  /** Receives this evaluation's diagnostics: the `Policy`'s `KeycardConfig.logger`, or a no-op logger when unset. */
+  readonly logger: Logger
+
   /** Evaluates `condition` against `subject`, preserving whether this point in the tree may still narrow into a field - used by $and/$or/$not, which don't narrow. */
   resolveSubcondition<TSubject>(subject: TSubject, condition: Condition<TSubject>): boolean
 
@@ -13,13 +17,13 @@ export interface OperatorContext {
 
   /** Returns `true` if a field condition (bare-key or `$field`) may still narrow at this point in the tree - the spec permits exactly one level. */
   canNarrowField(): boolean
-
-  /** Receives this evaluation's diagnostics: the `Policy`'s `KeycardConfig.logger`, or a no-op logger when unset. */
-  readonly logger: Logger
 }
 
+export type OperatorName = `$${string}`
+
 export interface Operator<TSubject, TValue = JsonValue> {
-  name: `$${string}`
+  id: string
+  name: OperatorName
   resolve: (subject: TSubject, value: TValue, ctx: OperatorContext) => boolean
 }
 
@@ -36,7 +40,7 @@ export type InferCondition<TOperator extends AnyOperator> =
  *   character - a key without the prefix is always read as a field name, so
  *   such an operator could never be reached.
  */
-export function assertOperatorName(name: unknown): asserts name is `$${string}` {
+export function assertOperatorName(name: unknown): asserts name is OperatorName {
   if (typeof name !== "string" || !name.startsWith("$") || name.length < 2) {
     throw new PolicyArgumentError(`Invalid operator name ${JSON.stringify(name)}: operator names MUST start with "$".`)
   }
@@ -61,6 +65,7 @@ export function createOperator<TSubject, TValue = JsonValue>(
   // OperatorCatalog built from data or a plain JS caller.
   assertOperatorName(name)
   return {
+    id: randomId(),
     name,
     resolve: (subject, value, ctx) => {
       try {
@@ -77,10 +82,10 @@ export function createOperator<TSubject, TValue = JsonValue>(
   }
 }
 
-/** A bare operator resolver function, keyed by its `$name` in an {@link OperatorCatalog}. */
-export type OperatorResolver<TSubject = unknown, TValue = JsonValue> = (
-  subject: TSubject,
-  value: TValue,
+/** A bare operator resolver function, keyed by its `$name` in an {@link OperatorsRecord}. */
+export type OperatorResolver = (
+  subject: unknown,
+  value: JsonValue,
   ctx: OperatorContext,
 ) => boolean
 
@@ -94,16 +99,4 @@ export type OperatorResolver<TSubject = unknown, TValue = JsonValue> = (
  * const operators: OperatorCatalog = { $even: (subject: number) => subject % 2 === 0 }
  * ```
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type OperatorCatalog<TSubject = any, TValue = JsonValue> = Record<`$${string}`, OperatorResolver<TSubject, TValue>>
-
-export function normalizeOperators<TOperators extends AnyOperator>(
-  operators: TOperators[] | OperatorCatalog | undefined,
-): AnyOperator[] {
-  if (operators === undefined) return []
-  if (Array.isArray(operators)) return operators
-  return Object.entries(operators).map(([name, resolve]) => {
-    assertOperatorName(name)
-    return createOperator(name, resolve)
-  })
-}
+export type OperatorsRecord = Record<OperatorName, OperatorResolver>

@@ -1,5 +1,4 @@
-import type { Subject } from "./subject.ts"
-import type { SubjectFieldMapper } from "./subjectFieldMapper.ts"
+import type { AnySubject, Subject } from "./subject.ts"
 import { randomId } from "../lib/randomId.ts"
 
 /**
@@ -7,71 +6,70 @@ import { randomId } from "../lib/randomId.ts"
  * supplies the name, so this form has no `name` parameter of its own.
  */
 export interface CreateSubjectOptions<TData, TArgs extends unknown[] = [TData]> {
-  /** Maps raw domain entities to this Subject's claims for `.from(...)`; defaults to identity, so `.from(x)` behaves like `.wrap(x)`. */
   from?: (...args: TArgs) => TData
-  /** Carried through every `.wrap()`/`.from()` call unchanged - see `SubjectFieldMapper`. */
-  fieldMapper?: SubjectFieldMapper<TData>
 }
 
-function makeSubject<TData, TArgs extends unknown[]>(
+function setClaims<
+  TClaims,
+  TArgs extends unknown[] = [TClaims],
+>(subject: AnySubject, claims: TClaims): Subject<TClaims, TArgs> {
+  const newSubject = {
+    ...subject,
+    claims: claims,
+    wrap: (newClaims: TClaims) => setClaims(newSubject, newClaims),
+  }
+
+  return newSubject
+}
+
+export function createSubject<
+  TClaims = never,
+  TArgs extends unknown[] = [TClaims],
+>(
   name: string,
-  dynamic: true | undefined,
-  instance: TData | undefined,
-  fieldMapper: SubjectFieldMapper<TData> | undefined,
-  fromMapper: (...args: TArgs) => TData,
-): Subject<TData, TArgs> {
-  return {
-    name,
+  options?: CreateSubjectOptions<TClaims, TArgs>,
+): Subject<TClaims>
+export function createSubject<
+  TClaims = never,
+  TArgs extends unknown[] = [TClaims],
+>(
+  options?: CreateSubjectOptions<TClaims, TArgs>,
+): Subject<TClaims, TArgs>
+export function createSubject<
+  TClaims = never,
+  TArgs extends unknown[] = [TClaims],
+>(
+  nameOrOptions: string | CreateSubjectOptions<TClaims, TArgs> = {},
+  options: CreateSubjectOptions<TClaims, TArgs> = {},
+): Subject<TClaims, TArgs> {
+  const id = randomId()
+  const isDynamic = typeof nameOrOptions !== "string"
+    ? true
+    : undefined
+  const name = typeof nameOrOptions === "string"
+    ? nameOrOptions
+    : id
+  const from = typeof nameOrOptions === "string"
+    ? options.from
+    : nameOrOptions.from
+
+  const subject: Subject<TClaims, TArgs> = {
     __brand: "subject",
-    __dynamic: dynamic,
-    instance,
-    fieldMapper,
-    wrap(obj: TData): Subject<TData, TArgs> {
-      return makeSubject(name, dynamic, obj, fieldMapper, fromMapper)
-    },
-    from(...args: TArgs): Subject<TData, TArgs> {
-      return makeSubject(name, dynamic, fromMapper(...args), fieldMapper, fromMapper)
+    __dynamic: isDynamic,
+
+    id: id,
+    name: name,
+
+    wrap: (claims: TClaims) => setClaims(subject, claims),
+
+    from: (...args: TArgs) => {
+      const claims = typeof from === "function"
+        ? from(...args)
+        : args[0] as TClaims
+
+      return subject.wrap(claims)
     },
   }
-}
 
-export function createSubject<TData = unknown, TArgs extends unknown[] = [TData]>(
-  name: string,
-  fieldMapper?: SubjectFieldMapper<TData>,
-): Subject<TData, TArgs>
-/**
- * Creates a dynamic (unnamed) Subject with no wrapped instance until
- * `.wrap(obj)`/`.from(...)` is called. Its `name` is a random id and it is
- * marked `__dynamic` (see {@link Subject.__dynamic}), so it must be
- * registered as a catalog value on a `KeycardConfig` before it's usable with
- * `PolicyBuilder`/`Policy`.
- *
- * `TArgs` defaults to `any[]`, since TypeScript can't infer it from
- * `options.from` once `TData` is given explicitly. Pass it explicitly for a
- * fully type-checked `.from(...)`:
- *
- * ```ts
- * const ProjectSubject = createSubject<{ orgId: string }, [Project]>({
- *   from: (project) => ({ orgId: project.orgId }),
- * })
- * ```
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createSubject<TData = unknown, TArgs extends unknown[] = any[]>(
-  options?: CreateSubjectOptions<TData, TArgs>,
-): Subject<TData, TArgs>
-export function createSubject<TData = unknown, TArgs extends unknown[] = [TData]>(
-  nameOrOptions?: string | CreateSubjectOptions<TData, TArgs>,
-  fieldMapper?: SubjectFieldMapper<TData>,
-): Subject<TData, TArgs> {
-  // TArgs is caller-chosen, so the identity mapping can't be verified
-  // structurally and needs this cast.
-  const identityFrom = ((...args: TArgs) => args[0]) as (...args: TArgs) => TData
-
-  if (typeof nameOrOptions === "string") {
-    return makeSubject<TData, TArgs>(nameOrOptions, undefined, undefined, fieldMapper, identityFrom)
-  }
-
-  const options = nameOrOptions ?? {}
-  return makeSubject<TData, TArgs>(randomId(), true, undefined, options.fieldMapper, options.from ?? identityFrom)
+  return subject
 }

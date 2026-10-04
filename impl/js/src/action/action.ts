@@ -1,5 +1,6 @@
 /** A named action - the Action position of a rule. Construct via `createAction`. */
 export interface Action<T extends string = string> {
+  readonly id: string
   readonly name: T
   readonly __brand: "action"
   /**
@@ -12,10 +13,13 @@ export interface Action<T extends string = string> {
   readonly __dynamic?: true
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyAction = Action<any>
+
 /**
  * A keyed collection of Actions whose keys become the serialized names for
  * their entries - what lets a dynamic (no-name) `createAction()` result be
  * registered with a real, stable name (GLOSSARY.md "Catalog"). Handed to
  * `PolicyBuilder`/`Policy` via `KeycardConfig.actions`.
  */
-export type ActionCatalog = Record<string, Action>
+export type ActionsRecord = Record<string, AnyAction>

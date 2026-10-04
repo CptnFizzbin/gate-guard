@@ -1,5 +1,4 @@
 import { PolicyTypeMismatchError } from "../../../errors/policyTypeMismatchError.ts"
-import type { SubjectFieldMapper } from "../../../subject/subjectFieldMapper.ts"
 import type { AnyCondition, Condition } from "../../condition.ts"
 import type { OperatorContext } from "../operator.ts"
 
@@ -36,19 +35,6 @@ export function isBareNe<TSubject>(condition: Condition<TSubject>): boolean {
 }
 
 /**
- * An {@link OperatorContext} additionally carrying the SubjectFieldMapper for
- * the top-level subject. Only present where `canNarrowField()` is `true` - the
- * only point in the tree where the subject in scope is still the top-level one.
- */
-export interface FieldMapperContext extends OperatorContext {
-  readonly fieldMapper: SubjectFieldMapper<unknown>
-}
-
-function hasFieldMapper(ctx: OperatorContext): ctx is FieldMapperContext {
-  return "fieldMapper" in ctx
-}
-
-/**
  * Evaluates `condition` against the `fieldName` field of `subject`, as both a
  * bare-key field condition and `$field` do. The context's SubjectFieldMapper,
  * if any, is tried first; a field it doesn't define uses ordinary property
@@ -57,7 +43,8 @@ function hasFieldMapper(ctx: OperatorContext): ctx is FieldMapperContext {
  * @throws PolicyTypeMismatchError if `ctx` doesn't allow field narrowing,
  *   i.e. a field condition is nested inside another field condition
  */
-export function checkField<TSubject>(subject: TSubject, fieldName: string, condition: AnyCondition, ctx: OperatorContext): boolean {
+export function checkField<TSubject>(
+  subject: TSubject, fieldName: string, condition: AnyCondition, ctx: OperatorContext): boolean {
   // A second narrowing step is a malformed condition shape, not a data
   // mismatch, so it's diagnosed rather than silently returning false.
   if (!ctx.canNarrowField()) {
@@ -69,12 +56,11 @@ export function checkField<TSubject>(subject: TSubject, fieldName: string, condi
     })
   }
 
-  if (hasFieldMapper(ctx) && Object.hasOwn(ctx.fieldMapper, fieldName)) {
-    return ctx.resolveFieldSubcondition(ctx.fieldMapper[fieldName](subject), condition)
-  }
-
   // The spec requires $ne to be the exact negation of $eq, and $eq on a
   // missing field is false, so a bare $ne on a missing field must be true;
   // every other condition on a missing field is false.
-  return hasField(subject, fieldName) ? ctx.resolveFieldSubcondition(subject[fieldName], condition) : isBareNe(condition)
+  return hasField(subject, fieldName)
+    ? ctx.resolveFieldSubcondition(subject[fieldName], condition)
+    : isBareNe(
+        condition)
 }

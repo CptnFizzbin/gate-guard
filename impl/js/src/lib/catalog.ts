@@ -1,48 +1,77 @@
-import { PolicyArgumentError } from "../errors/index.ts"
+export class Catalog<TData extends { id: string, name: string }> {
+  readonly wildcard: TData | null = null
+  private readonly items = new Map<string, TData>()
 
-/** A resolved `ActionCatalog`/`SubjectCatalog`: the reverse name lookup plus every catalog key. */
-export interface CatalogResolution {
-  /** Raw name (a dynamic Action/Subject's random id, or a named entry's own name) -> catalog key. */
-  reverseMap: Map<string, string>
-  names: string[]
-}
+  constructor(source: TData[] | Catalog<TData> = [], wildcard: TData | null = null) {
+    this.wildcard = wildcard
 
-const EMPTY_RESOLUTION: CatalogResolution = { reverseMap: new Map(), names: [] }
-
-/**
- * Resolves a `KeycardConfig.actions`/`.subjects` catalog into a {@link CatalogResolution}.
- *
- * @param kind names the vocabulary ("action"/"subject") in error messages
- * @param validate when false, an entry registered under two keys is not
- *   rejected; the last key wins
- * @throws PolicyArgumentError if `validate` is true and one entry is
- *   registered under more than one key
- */
-export function buildCatalog<T extends { name: string }>(
-  entries: Record<string, T> | undefined,
-  kind: string,
-  validate = true,
-): CatalogResolution {
-  if (entries === undefined) return EMPTY_RESOLUTION
-
-  const reverseMap = new Map<string, string>()
-  const names: string[] = []
-  for (const [key, entry] of Object.entries(entries)) {
-    if (validate) {
-      const existingKey = reverseMap.get(entry.name)
-      if (existingKey !== undefined && existingKey !== key) {
-        throw new PolicyArgumentError(
-          `KeycardConfig ${kind} catalog error: the same ${kind} is registered under both "${existingKey}" and "${key}" - a single Action/Subject can only be registered under one catalog key.`,
-        )
-      }
+    if (source instanceof Catalog) {
+      this.items = new Map(source.items.entries())
+    } else {
+      this.items = new Map(source.flatMap((item) => {
+        return [
+          [item.name, item],
+          [item.id, item],
+        ]
+      }))
     }
-    reverseMap.set(entry.name, key)
-    names.push(key)
   }
 
-  return { reverseMap, names }
-}
+  public get size() {
+    return this.items.size
+  }
 
-export function resolveName(reverseMap: Map<string, string>, rawName: string): string {
-  return reverseMap.get(rawName) ?? rawName
+  public values() {
+    return this.items.values()
+  }
+
+  public ids() {
+    return new Set(this.values().map((item) => item.id))
+  }
+
+  public names() {
+    return new Set(this.values().map((item) => item.name))
+  }
+
+  public add(item: TData): TData {
+    if (!this.has(item.id)) {
+      this.items.set(item.id, item)
+      this.items.set(item.name, item)
+    }
+
+    return this.get(item.id)!
+  }
+
+  public has(item: TData | string): boolean {
+    return !!this.get(item)
+  }
+
+  public get(item: TData | string): TData | undefined {
+    if (typeof item !== "string") {
+      return this.items.get(item.name)
+    } else {
+      return this.items.get(item)
+    }
+  }
+
+  public isWildcard(item: TData | string): boolean {
+    if (!this.wildcard) return false
+    return this.wildcard.id === this.get(item)?.id
+  }
+
+  public equal(left: TData | string | undefined, right: TData | string | undefined) {
+    if (!left || !right) return false
+
+    const leftItem = this.get(left)
+    if (!leftItem) return false
+
+    const rightItem = this.get(right)
+    if (!rightItem) return false
+
+    return (
+      this.isWildcard(leftItem)
+      || this.isWildcard(rightItem)
+      || leftItem.id === rightItem.id
+    )
+  }
 }

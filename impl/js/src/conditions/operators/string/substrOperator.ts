@@ -76,7 +76,5 @@ export const SubstrOperator = createOperator("$substr", (subject, pattern) => {
     },
   })
 
-  // Safe to reuse a cached RegExp: without the "g"/"y" flags, test() keeps no
-  // lastIndex state between calls.
   return getCompiledPattern(pattern).test(String(subject))
 })

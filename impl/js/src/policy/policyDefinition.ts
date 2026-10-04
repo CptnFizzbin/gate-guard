@@ -1,7 +1,18 @@
 import type { AnyCondition } from "../conditions/condition.ts"
+import type { JsonArray, JsonObject, JsonValue } from "../lib/json.ts"
 
 /** A rule's effect - allow it, or deny it. */
 export type Effect = "allow" | "deny"
+
+export const isEffect = (effect: unknown): effect is Effect => {
+  return (
+    typeof effect === "string"
+    && (
+      effect === "allow"
+      || effect === "deny"
+    )
+  )
+}
 
 /**
  * `[Effect, Action, Subject, Conditions?]`, with Action and Subject as plain
@@ -13,7 +24,7 @@ export type RuleTuple =
   | [Effect, string, string, AnyCondition]
 
 /** The optional `meta` object, grouping six independent, all-optional fields. */
-export interface Meta {
+export interface Meta extends JsonObject {
   /**
    * The action wildcard token. Absent -> defaults to
    * `"_ANY_"`. Explicit `null` or `false` -> disables the action wildcard entirely
@@ -29,18 +40,22 @@ export interface Meta {
   /** Declared custom `$`-operator vocabulary; when present, enforced at construction. */
   operators?: string[]
   /** Opaque application data - never validated, enforced, or cross-checked. */
-  application?: unknown
+  application?: JsonValue
 }
 
 /** The `PolicyDefinition` document shape. */
-export interface PolicyDefinition {
+export interface PolicyDefinition extends JsonObject {
   /** Required SemVer string, e.g. `"1.0.0"`. */
   version: string
   /** Informational only - plays no role in evaluation. */
   name?: string
   /** Informational only - plays no role in evaluation. */
   description?: string
+
   meta?: Meta
+
   /** Ordered; declaration order is significant. MAY be empty. */
   rules: RuleTuple[]
+
+  tests?: JsonArray
 }
