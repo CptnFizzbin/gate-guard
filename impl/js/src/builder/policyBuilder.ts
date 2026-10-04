@@ -1,12 +1,14 @@
 import type { AnyAction } from "../action/action.ts"
 import type { AnyCondition } from "../conditions/condition.ts"
 import type { Condition } from "../conditions/index.ts"
+import { BUILTIN_OPERATOR_NAMES } from "../conditions/operators/defaultOperators.ts"
 import type { AnyOperator, InferCondition } from "../conditions/operators/operator.ts"
 import { PolicyArgumentError } from "../errors/index.ts"
 import type { KeycardConfig } from "../keycardConfig.ts"
 import { KeycardContext } from "../keycardContext.ts"
 import { Policy } from "../policy/policy.ts"
 import type { Effect, Meta, PolicyDefinition, RuleTuple } from "../policy/policyDefinition.ts"
+import { DEFAULT_WILDCARD } from "../policy/wildcards.ts"
 import type { Subject } from "../subject/index.ts"
 import type { AnySubject } from "../subject/subject.ts"
 import { KEYCARD_POLICY_VERSION } from "../version.ts"
@@ -28,6 +30,8 @@ export class PolicyBuilder<
 > {
   private readonly ctx: KeycardContext<TOperators>
   private readonly rules: RuleTuple[] = []
+  private readonly actionsUsed = new Set<string>()
+  private readonly subjectsUsed = new Set<string>()
 
   /**
    * @param config shared with `Policy` - see `KeycardConfig`
@@ -103,37 +107,56 @@ export class PolicyBuilder<
 
   private buildMeta(): Meta {
     const meta: Meta = {}
-    meta.anySubject = this.ctx.actions.wildcard?.name ?? null
-    meta.anySubject = this.ctx.actions.wildcard?.name ?? null
+    if (this.ctx.anyAction !== DEFAULT_WILDCARD) meta.anyAction = this.ctx.anyAction
+    if (this.ctx.anySubject !== DEFAULT_WILDCARD) meta.anySubject = this.ctx.anySubject
 
     if (this.ctx.emitMeta) {
-      meta.actions = [...this.ctx.actions.names()]
-      meta.subjects = [...this.ctx.subjects.names()]
-      meta.operators = [...this.ctx.operators.names()]
+      meta.actions = [...new Set([...this.actionsUsed, ...this.ctx.actions.names()])]
+      meta.subjects = [...new Set([...this.subjectsUsed, ...this.ctx.subjects.names()])]
+
+      const custom = [...this.ctx.operators.names()].filter((name) => !BUILTIN_OPERATOR_NAMES.has(name))
+      if (custom.length > 0) meta.operators = custom
     }
 
     return meta
   }
 
   private addRule(effect: Effect, action: TActions, subject: TSubjects, conditions?: AnyCondition): this {
-    if (action.__dynamic && !this.ctx.actions.has(action)) {
+    if (this.ctx.emitMeta && action.__dynamic && !this.ctx.actions.has(action.id)) {
       throw new PolicyArgumentError(
         `This Action was created via createAction() with no name and must be registered as a catalog value on the KeycardConfig handed to this PolicyBuilder before use.`,
       )
     }
 
-    if (subject.__dynamic && !this.ctx.subjects.has(subject)) {
+    if (this.ctx.emitMeta && subject.__dynamic && !this.ctx.subjects.has(subject.id)) {
       throw new PolicyArgumentError(
         `This Subject was created via createSubject() with no name and must be registered as a catalog value on the KeycardConfig handed to this PolicyBuilder before use.`,
       )
     }
 
-    const savedAction = this.ctx.actions.add(action)
-    const savedSubject = this.ctx.subjects.add(subject)
+    const actionName = this.ctx.actions.get(action.id)?.name ?? action.name
+    const subjectName = this.ctx.subjects.get(subject.id)?.name ?? subject.name
+
+    if (conditions) {
+      // The spec requires the builder to reject a conditional rule wildcarded
+      // on both sides at the call site, not later in Policy.from.
+      const { anyAction, anySubject } = this.ctx
+      if (
+        anyAction !== false && anyAction !== null && actionName === anyAction
+        && anySubject !== false && anySubject !== null && subjectName === anySubject
+      ) {
+        throw new PolicyArgumentError(
+          `A rule wildcarded on both the action ("${anyAction}") and the subject ("${anySubject}") MUST NOT carry a Conditions element.`,
+        )
+      }
+    }
+
+    this.actionsUsed.add(actionName)
+    this.subjectsUsed.add(subjectName)
 
     const rule: RuleTuple = conditions !== undefined
-      ? [effect, savedAction.name, savedSubject.name, conditions]
-      : [effect, savedAction.name, savedSubject.name]
+      ? [effect, actionName, subjectName, conditions]
+      : [effect, actionName, subjectName]
 
     this.rules.push(rule)
 

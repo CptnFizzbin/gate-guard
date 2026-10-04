@@ -4,11 +4,13 @@ import { PolicyLoadException, PolicyVersionException } from "../errors/index.ts"
 import type { KeycardConfig } from "../keycardConfig.ts"
 import type { Meta, PolicyDefinition, RuleTuple } from "./policyDefinition.ts"
 import { isEffect } from "./policyDefinition.ts"
+import { BUILTIN_OPERATOR_NAMES } from "../conditions/operators/defaultOperators.ts"
 import type { AnyOperator } from "../conditions/operators/operator.ts"
 import { KeycardContext } from "../keycardContext.ts"
 import { collectOperators } from "../lib/conditionUtils.ts"
 import type { JsonArray, JsonObject, JsonValue } from "../lib/json.ts"
 import { KEYCARD_POLICY_SUPPORTED_VERSIONS } from "../version.ts"
+import { effectiveAnyAction, effectiveAnySubject } from "./wildcards.ts"
 
 const createErrorFactory = (ruleIndex: number, rule: unknown) => {
   return (msg: string) => {
@@ -22,19 +24,18 @@ export class PolicyValidator {
 
   constructor(config: KeycardContext | KeycardConfig<AnyOperator> = {}) {
     this.ctx = KeycardContext.from(config)
-
-    this.validateRule = this.validateRule.bind(this)
   }
 
   public validate(policy: JsonObject): asserts policy is PolicyDefinition {
     this.validateEnvelope(policy)
     this.validateVersion(policy.version)
 
-    if (policy.meta) {
+    if (policy.meta !== undefined) {
       this.validateMeta(policy.meta)
     }
 
-    policy.rules.forEach(this.validateRule)
+    this.validateOperatorsRegistered(policy.meta)
+    policy.rules.forEach((rule, index) => this.validateRule(rule, index, policy.meta))
   }
 
   public validateEnvelope(policy: JsonObject): asserts policy is PolicyDefinition {
@@ -97,26 +98,32 @@ export class PolicyValidator {
       throw new PolicyLoadException(`meta must be an object, got ${JSON.stringify(meta)}`)
     }
 
-    if (meta.actions) {
+    effectiveAnyAction(meta)
+    effectiveAnySubject(meta)
+
+    if (meta.actions !== undefined) {
       this.validateCatalogList(meta.actions, "meta.actions")
     }
 
-    if (meta.subjects) {
+    if (meta.subjects !== undefined) {
       this.validateCatalogList(meta.subjects, "meta.subjects")
     }
 
-    if (meta.operators) {
+    if (meta.operators !== undefined) {
       this.validateCatalogList(meta.operators, "meta.operators")
 
-      for (const name of meta.operators ?? []) {
+      for (const name of meta.operators) {
         if (!name.startsWith("$")) {
           throw new PolicyLoadException(`meta.operators entry "${name}" must be a "$"-prefixed operator name.`)
+        }
+        if (BUILTIN_OPERATOR_NAMES.has(name)) {
+          throw new PolicyLoadException(`meta.operators MUST NOT list the built-in operator "${name}".`)
         }
       }
     }
   }
 
-  public validateRule(rule: JsonValue, ruleIndex: number): asserts rule is RuleTuple {
+  public validateRule(rule: JsonValue, ruleIndex: number, meta?: Meta): asserts rule is RuleTuple {
     const createError = createErrorFactory(ruleIndex, rule)
 
     if (!Array.isArray(rule))
@@ -136,43 +143,69 @@ export class PolicyValidator {
     if (typeof subject !== "string")
       throw createError(`Malformed rule tuple: subject must be a string got ${JSON.stringify(subject)}`)
 
-    const isWildcardAction = this.ctx.actions.isWildcard(action)
-    const isWildcardSubject = this.ctx.subjects.isWildcard(subject)
+    const isWildcardAction = action === effectiveAnyAction(meta)
+    const isWildcardSubject = subject === effectiveAnySubject(meta)
     if (isWildcardAction && isWildcardSubject && conditions) {
       throw createError(`Illegal rule: Rule is any action and any subject but has conditions.`)
     }
 
-    if (this.ctx.actions.size >= 1) {
-      if (!this.ctx.actions.has(action)) {
-        throw createError(`Unknown action "${action}"`)
-      }
+    // Skipped with emitMeta: false, which opts out of catalog coverage but
+    // not of the structural checks above.
+    if (!this.ctx.emitMeta) return
+
+    const actionsCatalog = this.catalogOf(meta?.actions, this.ctx.actions.names())
+    if (actionsCatalog && !isWildcardAction && !actionsCatalog.has(action)) {
+      throw createError(`Action "${action}" is not covered by meta.actions.`)
     }
 
-    if (this.ctx.subjects.size >= 1) {
-      if (!this.ctx.subjects.has(subject)) {
-        throw createError(`Unknown subject "${subject}"`)
-      }
+    const subjectsCatalog = this.catalogOf(meta?.subjects, this.ctx.subjects.names())
+    if (subjectsCatalog && !isWildcardSubject && !subjectsCatalog.has(subject)) {
+      throw createError(`Subject "${subject}" is not covered by meta.subjects.`)
     }
 
-    if (conditions) {
-      const operators = collectOperators(conditions)
-      const knownOperators = new Set(this.ctx.operators.names())
-      const unknown = operators.difference(knownOperators)
-      if (unknown.size === 1) {
-        throw createError(`Unknown operator "${[...unknown][0]}"`)
-      } else if (unknown.size >= 1) {
-        throw createError(`Unknown operators "${[...unknown]}"`)
+    if (conditions && meta?.operators) {
+      const declared = new Set(meta.operators)
+      for (const operator of collectOperators(conditions)) {
+        if (!BUILTIN_OPERATOR_NAMES.has(operator) && !declared.has(operator)) {
+          throw createError(`Custom operator "${operator}" is not covered by meta.operators.`)
+        }
       }
     }
   }
 
+  /** Throws unless every `meta.operators` entry is registered, whether or not a rule uses it. */
+  private validateOperatorsRegistered(meta: Meta | undefined): void {
+    if (!this.ctx.emitMeta || !meta?.operators) return
+
+    for (const name of meta.operators) {
+      if (!this.ctx.operators.has(name)) {
+        throw new PolicyLoadException(
+          `meta.operators declares "${name}" but no operator with that name is registered.`,
+        )
+      }
+    }
+  }
+
+  /** The union of a declared `meta` catalog and the config's, or `undefined` when neither declares one. */
+  private catalogOf(declared: string[] | undefined, configured: Set<string>): Set<string> | undefined {
+    if (!declared && configured.size === 0) return undefined
+    return new Set([...(declared ?? []), ...configured])
+  }
+
   public validateCatalogList(entries: JsonValue, field: string): asserts entries is string[] {
     if (
-      !entries
-      || !Array.isArray(entries)
+      !Array.isArray(entries)
       || !entries.every((action) => typeof action === "string")
     ) {
       throw new PolicyLoadException(`${field} must be an array of strings, got ${JSON.stringify(entries)}.`)
+    }
+
+    const seen = new Set<string>()
+    for (const entry of entries) {
+      if (seen.has(entry)) {
+        throw new PolicyLoadException(`${field} lists "${entry}" more than once - each entry MUST be unique.`)
+      }
+      seen.add(entry)
     }
   }
 
