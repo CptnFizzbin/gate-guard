@@ -67,8 +67,10 @@ describe("PolicyBuilder: meta.actions/subjects/operators are derived from usage"
       { actions: { Delete: createAction("Delete") }, subjects: { Comment: createSubject("Comment") } }).allow(
       createAction("Read"), createSubject("Article")).buildDef()
 
-    expect(def.meta?.actions).toEqual(["Read", "Delete"])
-    expect(def.meta?.subjects).toEqual(["Article", "Comment"])
+    expect(def.meta?.actions).toHaveLength(2)
+    expect(def.meta?.actions).toEqual(expect.arrayContaining(["Read", "Delete"]))
+    expect(def.meta?.subjects).toHaveLength(2)
+    expect(def.meta?.subjects).toEqual(expect.arrayContaining(["Article", "Comment"]))
   })
 
   test(

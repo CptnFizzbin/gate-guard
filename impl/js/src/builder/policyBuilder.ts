@@ -30,8 +30,6 @@ export class PolicyBuilder<
 > {
   private readonly ctx: KeycardContext<TOperators>
   private readonly rules: RuleTuple[] = []
-  private readonly actionsUsed = new Set<string>()
-  private readonly subjectsUsed = new Set<string>()
 
   /**
    * @param config shared with `Policy` - see `KeycardConfig`
@@ -111,8 +109,8 @@ export class PolicyBuilder<
     if (this.ctx.anySubject !== DEFAULT_WILDCARD) meta.anySubject = this.ctx.anySubject
 
     if (this.ctx.emitMeta) {
-      meta.actions = [...new Set([...this.actionsUsed, ...this.ctx.actions.names()])]
-      meta.subjects = [...new Set([...this.subjectsUsed, ...this.ctx.subjects.names()])]
+      meta.actions = [...this.ctx.actions.names()]
+      meta.subjects = [...this.ctx.subjects.names()]
 
       const custom = [...this.ctx.operators.names()].filter((name) => !BUILTIN_OPERATOR_NAMES.has(name))
       if (custom.length > 0) meta.operators = custom
@@ -134,8 +132,8 @@ export class PolicyBuilder<
       )
     }
 
-    const actionName = this.ctx.actions.get(action.id)?.name ?? action.name
-    const subjectName = this.ctx.subjects.get(subject.id)?.name ?? subject.name
+    const actionName = this.ctx.actions.add(action).name
+    const subjectName = this.ctx.subjects.add(subject).name
 
     if (conditions) {
       // The spec requires the builder to reject a conditional rule wildcarded
@@ -150,9 +148,6 @@ export class PolicyBuilder<
         )
       }
     }
-
-    this.actionsUsed.add(actionName)
-    this.subjectsUsed.add(subjectName)
 
     const rule: RuleTuple = conditions !== undefined
       ? [effect, actionName, subjectName, conditions]
